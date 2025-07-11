@@ -12,10 +12,11 @@ import com.btalk.constants.UserStatus;
 
 import java.time.LocalDateTime;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 @Entity
-@Table(name = "Users", uniqueConstraints = {
+@Table(name = "users", uniqueConstraints = {
         @UniqueConstraint(columnNames = "phone_number")
 })
 @Data
@@ -55,7 +56,7 @@ public class User implements UserDetails{
 
 	@Override
 	public Collection<? extends GrantedAuthority> getAuthorities() {
-		return null;
+		return Collections.emptyList(); 
 	}
 
 	@Override

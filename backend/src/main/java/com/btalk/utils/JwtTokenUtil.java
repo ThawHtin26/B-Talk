@@ -2,6 +2,7 @@ package com.btalk.utils;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
@@ -26,10 +27,36 @@ public class JwtTokenUtil {
     private long expiration;
 
     public String generateToken(User user) {
-        Map<String, Object> claims = new HashMap<>();
-        claims.put("userId", user.getUserId());
-        claims.put("phoneNumber", user.getPhoneNumber());
-        return createToken(claims, user.getPhoneNumber());
+        try {
+            Map<String, Object> claims = new HashMap<>();
+            claims.put("userId", user.getUserId());
+            claims.put("phoneNumber", user.getPhoneNumber());
+            
+            String token = createToken(claims, user.getPhoneNumber());
+            
+            // Validate the generated token
+            if (token == null || token.split("\\.").length != 3) {
+                throw new IllegalStateException("Failed to generate valid JWT token");
+            }
+            
+            return token;
+        } catch (Exception e) {
+            throw new RuntimeException("Token generation failed", e);
+        }
+    }
+
+    private Claims extractAllClaims(String token) {
+        try {
+            return Jwts.parserBuilder()
+                    .setSigningKey(getSignKey())
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
+        } catch (MalformedJwtException e) {
+            throw new MalformedJwtException("Invalid JWT token format", e);
+        } catch (Exception e) {
+            throw new RuntimeException("Token parsing failed", e);
+        }
     }
 
     private String createToken(Map<String, Object> claims, String subject) {
@@ -60,13 +87,6 @@ public class JwtTokenUtil {
         return claimsResolver.apply(claims);
     }
 
-    private Claims extractAllClaims(String token) {
-        return Jwts.parserBuilder()
-                .setSigningKey(getSignKey())
-                .build()
-                .parseClaimsJws(token)
-                .getBody();
-    }
 
     private Boolean isTokenExpired(String token) {
         return extractExpiration(token).before(new Date());
