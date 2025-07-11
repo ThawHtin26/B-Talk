@@ -9,7 +9,6 @@ import org.hibernate.annotations.CreationTimestamp;
 import com.btalk.constants.MessageType;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Entity
 @Table(name = "messages")
@@ -21,13 +20,11 @@ public class Message {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long messageId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "conversation_id", nullable = false)
-    private Conversation conversation;
+    @Column(name = "conversation_id", nullable = false)
+    private Long conversationId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "sender_id", nullable = false)
-    private User sender;
+    @Column(name = "sender_id", nullable = false)
+    private Long senderId;
 
     private String content;
 
@@ -37,9 +34,4 @@ public class Message {
 
     @CreationTimestamp
     private LocalDateTime sentAt;
-
-    @OneToMany(mappedBy = "message", cascade = CascadeType.ALL)
-    private List<Attachment> attachments;
-
-   
 }

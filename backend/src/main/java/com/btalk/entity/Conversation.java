@@ -9,7 +9,6 @@ import org.hibernate.annotations.CreationTimestamp;
 import com.btalk.constants.ConversationType;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Entity
 @Table(name = "conversations")
@@ -27,17 +26,9 @@ public class Conversation {
 
     private String name;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "creator_id", nullable = false)
-    private User creator;
+    @Column(name = "creator_id", nullable = false)
+    private Long creatorId;
 
     @CreationTimestamp
     private LocalDateTime createdAt;
-
-    @OneToMany(mappedBy = "conversation", cascade = CascadeType.ALL)
-    private List<Participant> participants;
-
-    @OneToMany(mappedBy = "conversation", cascade = CascadeType.ALL)
-    private List<Message> messages;
-
 }

@@ -1,7 +1,6 @@
 package com.btalk.dto;
 
 import com.btalk.constants.MessageType;
-import com.btalk.dto.response.AttachmentDto;
 
 import lombok.Data;
 

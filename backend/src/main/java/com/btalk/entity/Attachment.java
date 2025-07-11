@@ -14,9 +14,8 @@ public class Attachment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long attachmentId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "message_id", nullable = false)
-    private Message message;
+    @Column(name = "message_id", nullable = false)
+    private Long messageId;
 
     @Column(nullable = false)
     private String fileUrl;

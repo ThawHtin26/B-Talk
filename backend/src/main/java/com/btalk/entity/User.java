@@ -13,7 +13,6 @@ import com.btalk.constants.UserStatus;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.List;
 
 @Entity
 @Table(name = "users", uniqueConstraints = {
@@ -22,7 +21,7 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class User implements UserDetails{
+public class User implements UserDetails {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long userId;
@@ -45,27 +44,18 @@ public class User implements UserDetails{
     @Enumerated(EnumType.STRING)
     private UserStatus status = UserStatus.OFFLINE;
 
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
-    private List<Participant> participants;
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        return Collections.emptyList(); 
+    }
 
-    @OneToMany(mappedBy = "sender", cascade = CascadeType.ALL)
-    private List<Message> messages;
+    @Override
+    public String getPassword() {
+        return this.passwordHash;
+    }
 
-    @OneToMany(mappedBy = "creator", cascade = CascadeType.ALL)
-    private List<Conversation> createdConversations;
-
-	@Override
-	public Collection<? extends GrantedAuthority> getAuthorities() {
-		return Collections.emptyList(); 
-	}
-
-	@Override
-	public String getPassword() {
-		return this.passwordHash;
-	}
-
-	@Override
-	public String getUsername() {
-		return this.phoneNumber;
-	}
+    @Override
+    public String getUsername() {
+        return this.phoneNumber;
+    }
 }
