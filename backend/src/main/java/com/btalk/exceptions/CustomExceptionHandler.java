@@ -7,7 +7,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import com.btalk.dto.ApiResponse;
+import com.btalk.dto.response.ApiResponse;
 
 import java.util.HashMap;
 import java.util.Map;

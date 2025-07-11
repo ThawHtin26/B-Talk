@@ -1,4 +1,4 @@
-package com.btalk.dto;
+package com.btalk.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;

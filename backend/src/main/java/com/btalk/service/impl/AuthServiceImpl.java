@@ -21,9 +21,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-import com.btalk.dto.AuthResponse;
-import com.btalk.dto.RegisterRequest;
-import com.btalk.dto.UserResponse;
+import com.btalk.dto.request.RegisterRequest;
+import com.btalk.dto.response.AuthResponse;
+import com.btalk.dto.response.UserResponse;
 import com.btalk.entity.User;
 import com.btalk.exceptions.UserAlreadyExistsException;
 import com.btalk.repository.UserRepository;

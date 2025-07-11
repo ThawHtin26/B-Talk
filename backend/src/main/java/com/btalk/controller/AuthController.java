@@ -9,10 +9,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.btalk.dto.ApiResponse;
-import com.btalk.dto.AuthResponse;
-import com.btalk.dto.LoginRequest;
-import com.btalk.dto.RegisterRequest;
+import com.btalk.dto.request.LoginRequest;
+import com.btalk.dto.request.RegisterRequest;
+import com.btalk.dto.response.ApiResponse;
+import com.btalk.dto.response.AuthResponse;
 import com.btalk.service.AuthService;
 
 @RestController

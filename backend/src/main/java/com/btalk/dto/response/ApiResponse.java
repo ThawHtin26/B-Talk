@@ -1,4 +1,4 @@
-package com.btalk.dto;
+package com.btalk.dto.response;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
