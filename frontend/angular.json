@@ -26,6 +26,7 @@
             "tsConfig": "tsconfig.app.json",
             "inlineStyleLanguage": "scss",
             "assets": [
+                "src/assets",
               {
                 "glob": "**/*",
                 "input": "public"
@@ -78,6 +79,7 @@
         "test": {
           "builder": "@angular-devkit/build-angular:karma",
           "options": {
+            "proxyConfig": "src/proxy.conf.json",
             "polyfills": [
               "zone.js",
               "zone.js/testing"
@@ -85,6 +87,7 @@
             "tsConfig": "tsconfig.spec.json",
             "inlineStyleLanguage": "scss",
             "assets": [
+                "src/assets",
               {
                 "glob": "**/*",
                 "input": "public"

@@ -3,12 +3,12 @@
   <!-- Header with search and create button -->
   <div class="p-4 border-b border-gray-200 flex items-center justify-between">
     <h2 class="text-xl font-semibold text-gray-800">Chats</h2>
-  <button (click)="createModal.showModal = true"
-          class="p-2 rounded-full bg-blue-500 text-white hover:bg-blue-600 transition-colors">
-    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-    </svg>
-  </button>
+    <button (click)="createModal.showModal = true"
+            class="p-2 rounded-full bg-blue-500 text-white hover:bg-blue-600 transition-colors">
+      <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+      </svg>
+    </button>
   </div>
 
   <!-- Search box -->
@@ -25,18 +25,33 @@
 
   <!-- Conversation list -->
   <div class="flex-1 overflow-y-auto">
-    <div *ngFor="let conv of filteredConversations()"
-         class="p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer flex items-center"
-         (click)="selectConversation(conv)">
-      <!-- ... existing conversation list item ... -->
-    </div>
-    <div *ngIf="conversations.length === 0" class="p-4 text-center text-gray-500">
-      No conversations yet. Start a new chat!
+    <ng-container *ngIf="filteredConversations$ | async as conversations">
+      <div *ngFor="let conv of conversations"
+           class="p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer flex items-center"
+           (click)="selectConversation(conv)">
+        <img [src]="conv.participants[0].user?.profilePhotoUrl || 'assets/default-avatar.png'"
+             class="h-10 w-10 rounded-full mr-3">
+        <div class="flex-1">
+          <div class="font-medium">{{conv.name || conv.participants[0].user?.name}}</div>
+          <div class="text-sm text-gray-500" *ngIf="conv.lastMessage">
+            {{conv.lastMessage.content | truncate:30}}
+          </div>
+        </div>
+        <div class="text-xs text-gray-400" *ngIf="conv.lastMessage">
+          {{conv.lastMessage.sentAt| date:'shortTime'}}
+        </div>
+      </div>
+      <div *ngIf="conversations.length === 0 && !isLoading" class="p-4 text-center text-gray-500">
+        No conversations found
+      </div>
+    </ng-container>
+    <div *ngIf="isLoading" class="p-4 text-center text-gray-500">
+      Loading conversations...
     </div>
   </div>
 
   <!-- Conversation creation modal -->
-    <app-conversation-create
+  <app-conversation-create
     #createModal
     [(showModal)]="createModal.showModal"
     (conversationCreated)="onConversationCreated()">

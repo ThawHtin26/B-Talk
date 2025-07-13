@@ -1,11 +1,12 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
-import { BehaviorSubject, Observable, tap } from 'rxjs';
+import { BehaviorSubject, catchError, Observable, tap } from 'rxjs';
 import { LoginRequest } from '../models/login-request';
 import { RegisterRequest } from '../models/register-request';
 import { AuthResponse} from '../models/auth-response';
 import { ApiResponse } from '../models/api-response';
+import { UserResponse } from '../models/user-response';
 
 @Injectable({
   providedIn: 'root'
@@ -33,13 +34,14 @@ export class AuthService {
     return null;
   }
 
-  login(credentials: LoginRequest): Observable<ApiResponse<AuthResponse>> {
+login(credentials:LoginRequest): Observable<ApiResponse<AuthResponse>> {
     return this.http.post<ApiResponse<AuthResponse>>(`${this.apiUrl}/auth/login`, credentials).pipe(
       tap(response => {
-        console.log(response);
-        localStorage.setItem('token', response.data.token);
-        localStorage.setItem('user', JSON.stringify(response.data.user));
-        this.tokenSubject.next(response.data.token);
+        if (response.success) {
+          localStorage.setItem('token', response.data.token);
+          localStorage.setItem('user', JSON.stringify(response.data.user));
+          this.tokenSubject.next(response.data.token);
+        }
       })
     );
   }
@@ -64,7 +66,7 @@ export class AuthService {
     return !!this.getToken();
   }
 
-  getCurrentUser(): any {
+  getCurrentUser(): UserResponse |  null{
     const user = localStorage.getItem('user');
     return user ? JSON.parse(user) : null;
   }

@@ -1,75 +1,134 @@
 <!-- conversation-create.component.html -->
-<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" *ngIf="showModal">
+<div
+  class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+  *ngIf="showModal"
+>
   <div class="bg-white rounded-lg p-6 w-full max-w-md">
     <h2 class="text-xl font-semibold mb-4">Create New Conversation</h2>
 
     <div class="mb-4">
       <label class="flex items-center space-x-2 cursor-pointer">
-        <input type="checkbox" [(ngModel)]="isGroup" class="rounded h-5 w-5 text-blue-500 focus:ring-blue-400">
+        <input
+          type="checkbox"
+          [(ngModel)]="isGroup"
+          class="rounded h-5 w-5 text-blue-500 focus:ring-blue-400"
+        />
         <span class="text-gray-700">Group Conversation</span>
       </label>
     </div>
 
     <div *ngIf="isGroup" class="mb-4">
-      <label class="block text-sm font-medium text-gray-700 mb-1">Group Name</label>
-      <input type="text" [(ngModel)]="conversationName"
-             class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-             placeholder="Enter group name">
+      <label class="block text-sm font-medium text-gray-700 mb-1"
+        >Group Name</label
+      >
+      <input
+        type="text"
+        [(ngModel)]="conversationName"
+        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        placeholder="Enter group name"
+      />
     </div>
 
     <div class="mb-4">
-      <label class="block text-sm font-medium text-gray-700 mb-1">Search Users</label>
+      <label class="block text-sm font-medium text-gray-700 mb-1"
+        >Search Users</label
+      >
       <div class="relative">
-        <input type="text" [(ngModel)]="searchTerm" (input)="search(searchTerm)"
-               class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-               placeholder="Search by name or email">
-        <svg class="absolute left-3 top-2.5 h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+        <input
+          type="text"
+          [(ngModel)]="searchTerm"
+          (input)="search(searchTerm)"
+          class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          placeholder="Search by name or phoneNumber"
+        />
+        <svg
+          class="absolute left-3 top-2.5 h-5 w-5 text-gray-400"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+          ></path>
         </svg>
       </div>
     </div>
 
     <div class="mb-4">
-      <label class="block text-sm font-medium text-gray-700 mb-1">Selected Participants</label>
+      <label class="block text-sm font-medium text-gray-700 mb-1"
+        >Selected Participants</label
+      >
       <div *ngIf="selectedUsers.length > 0" class="flex flex-wrap gap-2 mb-2">
-        <div *ngFor="let user of selectedUsers" class="flex items-center bg-blue-100 rounded-full px-3 py-1">
+        <div
+          *ngFor="let user of selectedUsers"
+          class="flex items-center bg-blue-100 rounded-full px-3 py-1"
+        >
           <span class="text-sm text-blue-800">{{ user.name }}</span>
-          <button (click)="toggleUserSelection(user)" class="ml-1 text-blue-500 hover:text-blue-700">
-            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-            </svg>
+          <button
+            (click)="toggleUserSelection(user)"
+            class="ml-1 text-blue-500 hover:text-blue-700"
+          >
+            ✕
           </button>
         </div>
       </div>
-      <div *ngIf="selectedUsers.length === 0" class="text-sm text-gray-500 italic">No participants selected</div>
     </div>
 
-    <div class="mb-4 max-h-60 overflow-y-auto border border-gray-200 rounded-md">
-      <div *ngFor="let user of filteredUsers"
-           (click)="toggleUserSelection(user)"
-           [class.bg-blue-50]="isSelected(user.userId)"
-           class="p-3 hover:bg-gray-50 cursor-pointer flex items-center">
-        <img [src]="user.profilePhotoUrl || 'assets/default-avatar.png'"
-             class="h-10 w-10 rounded-full mr-3">
+    <div
+      class="mb-4 max-h-60 overflow-y-auto border border-gray-200 rounded-md"
+    >
+      <!-- conversation-create.component.html -->
+      <div
+        *ngFor="let user of filteredUsers"
+        (click)="toggleUserSelection(user)"
+        [class.bg-blue-50]="isSelected(user.userId)"
+        [class.opacity-50]="user.userId === currentUserId"
+        [class.cursor-not-allowed]="user.userId === currentUserId"
+        class="p-3 hover:bg-gray-50 cursor-pointer flex items-center"
+      >
+        <img
+          [src]="user.profilePhotoUrl || 'assets/default-avatar.png'"
+          class="h-10 w-10 rounded-full mr-3"
+        />
         <div>
-          <div class="font-medium text-gray-900">{{ user.name }}</div>
+          <div class="font-medium text-gray-900">
+            {{ user.name }}
+            <span
+              *ngIf="user.userId === currentUserId"
+              class="text-sm text-gray-500"
+              >(You)</span
+            >
+          </div>
           <div class="text-sm text-gray-500">{{ user.phoneNumber }}</div>
         </div>
       </div>
-      <div *ngIf="filteredUsers.length === 0" class="p-3 text-center text-gray-500">
+      <div
+        *ngIf="filteredUsers.length === 0"
+        class="p-3 text-center text-gray-500"
+      >
         No users found
       </div>
     </div>
 
     <div class="flex justify-end space-x-3">
-      <button (click)="showModal = false; resetForm()"
-              class="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors">
+      <button
+        (click)="showModal = false; resetForm()"
+        class="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
+      >
         Cancel
       </button>
-      <button (click)="createConversation()"
-              [disabled]="(isGroup && (selectedUsers.length < 2 || !conversationName)) || (!isGroup && selectedUsers.length !== 1)"
-              class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:bg-blue-300 transition-colors">
-        {{ isGroup ? 'Create Group' : 'Start Chat' }}
+      <button
+        (click)="createConversation()"
+        [disabled]="
+          (isGroup && (selectedUsers.length < 2 || !conversationName)) ||
+          (!isGroup && selectedUsers.length !== 1)
+        "
+        class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:bg-blue-300 transition-colors"
+      >
+        {{ isGroup ? "Create Group" : "Start Chat" }}
       </button>
     </div>
   </div>

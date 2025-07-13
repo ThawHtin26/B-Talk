@@ -1,35 +1,96 @@
-<div class="h-full flex flex-col-reverse overflow-y-auto p-4 space-y-4 space-y-reverse">
-  <div *ngFor="let message of messages" 
-       [class.items-end]="isMyMessage(message.senderId)"
-       [class.items-start]="!isMyMessage(message.senderId)"
-       class="flex flex-col">
-    <div *ngIf="!isMyMessage(message.senderId)" class="text-sm text-gray-500 mb-1">
-      {{ message.sender?.name }}
-    </div>
-    <div [class.bg-blue-500]="isMyMessage(message.senderId)"
-         [class.bg-gray-200]="!isMyMessage(message.senderId)"
-         [class.text-white]="isMyMessage(message.senderId)"
-         class="rounded-lg p-3 max-w-xs lg:max-w-md">
-      <div *ngIf="message.content">{{ message.content }}</div>
-      <app-attachment-preview *ngFor="let attachment of message.attachments" 
-                             [attachment]="attachment"></app-attachment-preview>
-      <div class="text-xs mt-1 text-right" 
-           [class.text-blue-100]="isMyMessage(message.senderId)"
-           [class.text-gray-500]="!isMyMessage(message.senderId)">
-        {{ message.sentAt | date:'shortTime' }}
-        <span *ngIf="isMyMessage(message.senderId)" class="ml-1">
-          <svg *ngIf="message.status === 'SENT'" class="h-3 w-3 inline" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"/>
-          </svg>
-          <svg *ngIf="message.status === 'DELIVERED'" class="h-3 w-3 inline" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
-            <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"/>
-          </svg>
-          <svg *ngIf="message.status === 'READ'" class="h-3 w-3 inline" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
-            <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>
-          </svg>
-        </span>
+<div class="h-full flex flex-col">
+  <div class="flex-1 overflow-y-auto p-4">
+    <div class="space-y-4">
+      <div *ngFor="let message of messages; trackBy: trackByMessageId"
+           [class.items-end]="isMyMessage(message.senderId)"
+           [class.items-start]="!isMyMessage(message.senderId)"
+           class="flex flex-col">
+        <div *ngIf="!isMyMessage(message.senderId)" class="text-sm text-gray-500 mb-1">
+          {{ message.senderName }}
+        </div>
+        <div [class.bg-blue-500]="isMyMessage(message.senderId)"
+             [class.bg-gray-200]="!isMyMessage(message.senderId)"
+             [class.text-white]="isMyMessage(message.senderId)"
+             class="rounded-lg p-3 max-w-xs lg:max-w-md">
+          <div *ngIf="message.messageType === 'TEXT'">{{ message.content }}</div>
+
+          <!-- Enhanced attachment preview -->
+          <div *ngFor="let attachment of message.attachments" class="mt-2">
+            <!-- Image attachment -->
+            <div *ngIf="attachment.fileType.startsWith('image/')" class="rounded-lg overflow-hidden">
+              <img [src]="(getSafeFileUrl(attachment.fileUrl))"
+                   class="max-w-full max-h-64 object-cover cursor-pointer"
+                   (click)="openMediaViewer(attachment)">
+              <div class="text-xs mt-1 truncate"
+                   [class.text-blue-100]="isMyMessage(message.senderId)"
+                   [class.text-gray-700]="!isMyMessage(message.senderId)">
+                {{ attachment.fileUrl | filenameFromUrl }}
+              </div>
+            </div>
+
+            <!-- Video attachment -->
+            <div *ngIf="attachment.fileType.startsWith('video/')" class="rounded-lg overflow-hidden">
+              <video controls class="max-w-full max-h-64">
+                <source [src]="attachment.fileUrl" [type]="attachment.fileType">
+                Your browser does not support the video tag.
+              </video>
+              <div class="text-xs mt-1 truncate"
+                   [class.text-blue-100]="isMyMessage(message.senderId)"
+                   [class.text-gray-700]="!isMyMessage(message.senderId)">
+                {{ attachment.fileUrl | filenameFromUrl }}
+              </div>
+            </div>
+
+            <!-- Audio attachment -->
+            <div *ngIf="attachment.fileType.startsWith('audio/')"
+                 class="flex items-center gap-2 p-2 rounded-lg bg-black bg-opacity-10">
+              <button (click)="toggleAudioPlayback(attachment)" class="text-lg">
+                {{ isAudioPlaying(attachment) ? '⏸️' : '▶️' }}
+              </button>
+              <div class="flex-1 min-w-0">
+                <div class="text-sm truncate">{{ attachment.fileUrl | filenameFromUrl }}</div>
+                <div *ngIf="attachment.fileSizeBytes" class="text-xs opacity-75">
+                  {{ formatFileSize(attachment.fileSizeBytes) }}
+                </div>
+              </div>
+              <audio #audioPlayer [src]="attachment.fileUrl" (ended)="onAudioEnded(attachment)"></audio>
+            </div>
+
+            <!-- Document attachment -->
+            <div *ngIf="!attachment.fileType.startsWith('image/') &&
+                        !attachment.fileType.startsWith('video/') &&
+                        !attachment.fileType.startsWith('audio/')"
+                 class="flex items-center gap-2 p-2 rounded-lg border"
+                 [class.border-blue-200]="isMyMessage(message.senderId)"
+                 [class.border-gray-300]="!isMyMessage(message.senderId)">
+              <div class="text-2xl text-gray-500">
+                {{ getFileIcon(attachment) }}
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="text-sm truncate">{{ attachment.fileUrl | filenameFromUrl }}</div>
+                <div *ngIf="attachment.fileSizeBytes" class="text-xs text-gray-500">
+                  {{ formatFileSize(attachment.fileSizeBytes) }}
+                </div>
+              </div>
+              <a [href]="attachment.fileUrl"
+                 [download]="attachment.fileUrl | filenameFromUrl"
+                 class="text-blue-500 hover:text-blue-700">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+                </svg>
+              </a>
+            </div>
+          </div>
+
+          <div class="text-xs mt-1 text-right"
+               [class.text-blue-100]="isMyMessage(message.senderId)"
+               [class.text-gray-500]="!isMyMessage(message.senderId)">
+            {{ message.sentAt | date:'shortTime' }}
+            <span *ngIf="isMyMessage(message.senderId)" class="ml-1">
+              <!-- Status icons remain the same -->
+            </span>
+          </div>
+        </div>
       </div>
     </div>
   </div>

@@ -1,11 +1,13 @@
-// conversation-create.component.ts
-import { Component, EventEmitter, inject, Input, OnInit, Output } from '@angular/core';
+import { Component, EventEmitter, inject, Input, OnInit, Output, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ChatService } from '../../services/chat.service';
 import { UserService } from '../../services/user.service';
+import { AuthService } from '../../services/auth.service';
 import { UserResponse } from '../../models/user-response';
-import { debounceTime, distinctUntilChanged, Subject } from 'rxjs';
+import { catchError, debounceTime, distinctUntilChanged, finalize, of, Subject, switchMap, tap } from 'rxjs';
+import { ApiResponse } from '../../models/api-response';
+import { Conversation } from '../../models/conversation';
 
 @Component({
   selector: 'app-conversation-create',
@@ -15,91 +17,172 @@ import { debounceTime, distinctUntilChanged, Subject } from 'rxjs';
   styleUrls: ['./conversation-create.component.scss']
 })
 export class ConversationCreateComponent implements OnInit {
-  @Input() showModal = false;  // Receive state from parent
+  @Input() showModal = false;
   @Output() showModalChange = new EventEmitter<boolean>();
+  @Output() conversationCreated = new EventEmitter<Conversation>();
+
   private chatService = inject(ChatService);
   private userService = inject(UserService);
+  private authService = inject(AuthService);
+  private cd = inject(ChangeDetectorRef);
 
-  users: UserResponse[] = [];
   filteredUsers: UserResponse[] = [];
   selectedUsers: UserResponse[] = [];
   conversationName = '';
   isGroup = false;
   searchTerm = '';
+  isLoading = false;
+  error: string | null = null;
+  currentUserId: number | null = null;
   private searchTerms = new Subject<string>();
+  private readonly destroy$ = new Subject<void>();
 
   ngOnInit(): void {
-    this.userService.getUsers().subscribe(users => {
-      this.users = users;
-      this.filteredUsers = [...users];
-    });
+    this.currentUserId = this.authService.getCurrentUser()?.userId || null;
+    this.setupSearch();
+  }
 
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  private setupSearch(): void {
     this.searchTerms.pipe(
       debounceTime(300),
-      distinctUntilChanged()
-    ).subscribe(term => {
-      this.filterUsers(term);
+      distinctUntilChanged(),
+      tap(() => {
+        this.isLoading = true;
+        this.filteredUsers = [];
+        this.cd.markForCheck();
+      }),
+      switchMap(term => {
+        if (!term || term.trim().length === 0) {
+          return of({ success: true, data: [], message: '' } as ApiResponse<UserResponse[]>);
+        }
+        return this.userService.searchUsers(term).pipe(
+          catchError(error => {
+            console.error('Search error:', error);
+            return of({
+              success: false,
+              message: 'Search failed',
+              data: []
+            } as ApiResponse<UserResponse[]>);
+          })
+        );
+      }),
+      finalize(() => {
+        this.isLoading = false;
+        this.cd.markForCheck();
+      })
+    ).subscribe({
+      next: (response: ApiResponse<UserResponse[]>) => {
+        if (response.success && response.data) {
+          this.filteredUsers = response.data.filter(user =>
+            user.userId !== this.currentUserId
+          );
+        } else {
+          this.filteredUsers = [];
+          if (!response.success) {
+            this.error = response.message || 'Failed to search users';
+          }
+        }
+        this.cd.markForCheck();
+      },
+      error: (err) => {
+        console.error('Search subscription error:', err);
+        this.filteredUsers = [];
+        this.error = 'Error searching users';
+        this.cd.markForCheck();
+      }
     });
   }
 
   search(term: string): void {
+    this.error = null;
     this.searchTerms.next(term);
   }
 
-  filterUsers(term: string): void {
-    if (!term) {
-      this.filteredUsers = [...this.users];
-      return;
-    }
-    this.filteredUsers = this.users.filter(user =>
-      user.name.toLowerCase().includes(term.toLowerCase()) ||
-      user.phoneNumber.toLowerCase().includes(term.toLowerCase())
-    );
-  }
-
   toggleUserSelection(user: UserResponse): void {
+    if (user.userId === this.currentUserId) return;
+
     const index = this.selectedUsers.findIndex(u => u.userId === user.userId);
     if (index === -1) {
       this.selectedUsers.push(user);
     } else {
       this.selectedUsers.splice(index, 1);
     }
+    this.cd.markForCheck();
   }
 
   isSelected(userId: number): boolean {
     return this.selectedUsers.some(u => u.userId === userId);
   }
 
-    closeModal(): void {
+  closeModal(): void {
     this.showModal = false;
     this.showModalChange.emit(false);
     this.resetForm();
   }
 
-
   createConversation(): void {
-    if (this.isGroup) {
-      // ... existing validation ...
-      this.chatService.createGroupConversation(
-        this.conversationName,
-        this.selectedUsers.map(u => u.userId)
-      ).subscribe({
-        next: () => {
-          this.closeModal();  // Use the new method
-        },
-        // ... error handler ...
-      });
-    } else {
-      // ... private conversation logic ...
-      this.chatService.createPrivateConversation(
-        this.selectedUsers[0].userId
-      ).subscribe({
-        next: () => {
-          this.closeModal();  // Use the new method
-        },
-        // ... error handler ...
-      });
+    this.error = null;
+
+    if (!this.validateForm()) {
+      this.error = this.isGroup
+        ? 'Please select at least 2 users and provide a group name'
+        : 'Please select exactly 1 user for private conversation';
+      return;
     }
+
+    const participants = this.selectedUsers
+      .filter(user => user.userId !== this.currentUserId)
+      .map(u => u.userId);
+
+    if (participants.length === 0) {
+      this.error = 'Please select at least one participant';
+      return;
+    }
+
+    if (this.isGroup && !this.conversationName?.trim()) {
+      this.error = 'Group name is required';
+      return;
+    }
+
+    this.isLoading = true;
+    this.cd.markForCheck();
+
+    const serviceCall = this.isGroup
+      ? this.chatService.createGroupConversation(this.conversationName.trim(), participants)
+      : this.chatService.createPrivateConversation(participants[0]);
+
+    serviceCall.pipe(
+      finalize(() => {
+        this.isLoading = false;
+        this.cd.markForCheck();
+      })
+    ).subscribe({
+      next: (response: ApiResponse<Conversation>) => {
+        if (response.success && response.data) {
+          this.conversationCreated.emit(response.data);
+          this.closeModal();
+        } else {
+          this.error = response.message || 'Failed to create conversation';
+        }
+      },
+      error: (err) => {
+        console.error('Failed to create conversation', err);
+        this.error = err.error?.message || 'An unexpected error occurred';
+        this.cd.markForCheck();
+      }
+    });
+  }
+
+  private validateForm(): boolean {
+    if (this.isGroup) {
+      return this.selectedUsers.length >= 2 && !!this.conversationName?.trim();
+    }
+    return this.selectedUsers.length === 1;
   }
 
   resetForm(): void {
@@ -107,6 +190,8 @@ export class ConversationCreateComponent implements OnInit {
     this.conversationName = '';
     this.isGroup = false;
     this.searchTerm = '';
-    this.filterUsers('');
+    this.filteredUsers = [];
+    this.error = null;
+    this.cd.markForCheck();
   }
 }

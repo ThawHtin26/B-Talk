@@ -1,14 +1,21 @@
 import { Attachment } from "./attachment";
-import { UserResponse } from "./user-response";
+
+export enum MessageType {
+  TEXT = 'TEXT',
+  IMAGE = 'IMAGE',
+  VIDEO = 'VIDEO',
+  DOCUMENT = 'DOCUMENT',
+  AUDIO = 'AUDIO'
+}
 
 export interface Message {
-  messageId: number;
+  messageId?: number | null;  // Optional because it's assigned by server
   conversationId: number;
   senderId: number;
+  senderName?: string | null;  // Optional, might be added by server
   content: string;
-  messageType: 'TEXT' | 'IMAGE' | 'VIDEO' | 'AUDIO' | 'DOCUMENT';
-  sentAt: string;
+  messageType: MessageType;
+  sentAt: string;     // Will be set by server
+  status: 'SENT' | 'DELIVERED' | 'SEEN';
   attachments: Attachment[];
-  sender?: UserResponse;
-  status?: 'SENT' | 'DELIVERED' | 'READ';
 }

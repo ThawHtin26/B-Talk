@@ -1,60 +1,142 @@
-<div class="flex items-center space-x-2">
-  <!-- Attachment button -->
-  <button class="p-2 rounded-full text-gray-500 hover:text-gray-700 hover:bg-gray-100">
-    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path>
-    </svg>
-    <input type="file" multiple class="hidden" #fileInput (change)="onFileSelected($event)">
-  </button>
+<div class="flex flex-col">
+  <!-- Attachment preview -->
+  <div *ngIf="attachmentPreviews.length" class="mt-2 flex flex-wrap gap-2">
+    <div *ngFor="let preview of attachmentPreviews; let i = index" class="relative group">
+      <!-- Image preview -->
+      <div *ngIf="preview.file.type.startsWith('image/')" class="relative">
+        <img [src]="preview.url"
+             class="h-24 w-24 object-cover rounded-lg border border-gray-200">
+        <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all rounded-lg"></div>
 
-  <!-- Message input -->
-  <div class="flex-1 relative">
-    <input type="text" placeholder="Type a message" 
-           [(ngModel)]="message"
-           (keyup.enter)="sendMessage()"
-           class="w-full py-2 px-4 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
-    <button *ngIf="isRecording" (click)="stopRecording()" class="absolute right-2 top-1.5 text-red-500">
-      <svg class="h-6 w-6" fill="currentColor" viewBox="0 0 20 20">
-        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 002 0V8a1 1 0 00-1-1zm4 0a1 1 0 00-1 1v4a1 1 0 002 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
-      </svg>
-    </button>
+        <!-- Upload progress overlay -->
+        <div *ngIf="preview.uploadProgress !== undefined && preview.uploadProgress < 100"
+             class="absolute inset-0 bg-black bg-opacity-40 rounded-lg flex items-center justify-center">
+          <div class="w-16 h-1 bg-gray-300 rounded-full overflow-hidden">
+            <div class="h-full bg-blue-500 transition-all duration-300"
+                 [style.width.%]="preview.uploadProgress"></div>
+          </div>
+        </div>
+
+        <!-- Error message -->
+        <div *ngIf="preview.error"
+             class="absolute inset-0 bg-red-100 bg-opacity-90 rounded-lg flex items-center justify-center p-1">
+          <span class="text-xs text-red-700 text-center">{{ preview.error }}</span>
+        </div>
+      </div>
+
+      <!-- Video preview -->
+      <div *ngIf="preview.file.type.startsWith('video/')" class="relative">
+        <video class="h-24 w-24 object-cover rounded-lg border border-gray-200" controls>
+          <source [src]="preview.url" [type]="preview.file.type">
+        </video>
+        <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all rounded-lg"></div>
+
+        <!-- Upload progress overlay -->
+        <div *ngIf="preview.uploadProgress !== undefined && preview.uploadProgress < 100"
+             class="absolute inset-0 bg-black bg-opacity-40 rounded-lg flex items-center justify-center">
+          <div class="w-16 h-1 bg-gray-300 rounded-full overflow-hidden">
+            <div class="h-full bg-blue-500 transition-all duration-300"
+                 [style.width.%]="preview.uploadProgress"></div>
+          </div>
+        </div>
+
+        <!-- Error message -->
+        <div *ngIf="preview.error"
+             class="absolute inset-0 bg-red-100 bg-opacity-90 rounded-lg flex items-center justify-center p-1">
+          <span class="text-xs text-red-700 text-center">{{ preview.error }}</span>
+        </div>
+      </div>
+
+      <!-- Document preview -->
+      <div *ngIf="!preview.file.type.startsWith('image/') && !preview.file.type.startsWith('video/')"
+           class="h-24 w-24 bg-gray-50 rounded-lg border border-gray-200 flex flex-col items-center justify-center p-2 relative">
+        <span class="material-icons text-gray-500 text-3xl mb-1">{{ getFileIcon(preview.file) }}</span>
+        <span class="text-xs text-gray-700 text-center truncate w-full">{{ preview.file.name }}</span>
+        <span class="text-xs text-gray-500">{{ formatFileSize(preview.file.size) }}</span>
+
+        <!-- Upload progress overlay -->
+        <div *ngIf="preview.uploadProgress !== undefined && preview.uploadProgress < 100"
+             class="absolute inset-0 bg-black bg-opacity-40 rounded-lg flex items-center justify-center">
+          <div class="w-16 h-1 bg-gray-300 rounded-full overflow-hidden">
+            <div class="h-full bg-blue-500 transition-all duration-300"
+                 [style.width.%]="preview.uploadProgress"></div>
+          </div>
+        </div>
+
+        <!-- Error message -->
+        <div *ngIf="preview.error"
+             class="absolute inset-0 bg-red-100 bg-opacity-90 rounded-lg flex items-center justify-center p-1">
+          <span class="text-xs text-red-700 text-center">{{ preview.error }}</span>
+        </div>
+      </div>
+
+      <!-- Remove button -->
+      <button (click)="removeAttachment(i)"
+              class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full h-5 w-5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm hover:bg-red-600"
+              [disabled]="isUploading">
+        <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+      </button>
+    </div>
   </div>
 
-  <!-- Send/Record button -->
-  <button *ngIf="message || attachments.length; else recordButton" 
-          (click)="sendMessage()"
-          class="p-2 rounded-full bg-blue-500 text-white hover:bg-blue-600">
-    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
-    </svg>
-  </button>
-
-  <ng-template #recordButton>
-    <button (click)="startRecording()" class="p-2 rounded-full text-gray-500 hover:text-gray-700 hover:bg-gray-100">
+  <!-- Input area -->
+  <div class="flex items-center space-x-2 mt-2">
+    <!-- Attachment button -->
+    <label class="p-2 rounded-full text-gray-500 hover:text-gray-700 hover:bg-gray-100 cursor-pointer transition-colors"
+           [class.opacity-50]="isUploading"
+           [class.cursor-not-allowed]="isUploading">
       <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"></path>
+      </svg>
+      <input type="file" multiple
+             [accept]="acceptedFileTypes"
+             class="hidden"
+             (change)="onFileSelected($event)"
+             [disabled]="isUploading">
+    </label>
+
+    <!-- Message input -->
+    <div class="flex-1 relative">
+      <input type="text" placeholder="Type a message"
+             [(ngModel)]="messageContent"
+             (keyup.enter)="sendMessage()"
+             class="w-full py-2 px-4 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+             [disabled]="isUploading">
+      <button *ngIf="isRecording" (click)="stopRecording()" class="absolute right-2 top-1.5 text-red-500 animate-pulse">
+        <svg class="h-6 w-6" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 002 0V8a1 1 0 00-1-1zm4 0a1 1 0 00-1 1v4a1 1 0 002 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Send/Record button -->
+    <button *ngIf="messageContent || attachmentPreviews.length; else recordButton"
+            (click)="sendMessage()"
+            class="p-2 rounded-full bg-blue-500 text-white hover:bg-blue-600 transition-colors disabled:opacity-50"
+            [disabled]="(!messageContent.trim() && attachmentPreviews.length === 0) || isUploading">
+      <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
       </svg>
     </button>
-  </ng-template>
 
-  <!-- Video call button -->
-  <button (click)="startVideoCall()" class="p-2 rounded-full text-gray-500 hover:text-gray-700 hover:bg-gray-100">
-    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
-    </svg>
-  </button>
-</div>
+    <ng-template #recordButton>
+      <button (click)="startRecording()"
+              class="p-2 rounded-full text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+              [disabled]="isUploading">
+        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path>
+        </svg>
+      </button>
+    </ng-template>
 
-<!-- Attachment preview -->
-<div *ngIf="attachments.length" class="mt-2 flex space-x-2">
-  <div *ngFor="let file of attachments" class="relative">
-    <img *ngIf="file.type.startsWith('image/')" [src]="createObjectURL(file)" class="h-16 w-16 object-cover rounded">
-    <div *ngIf="!file.type.startsWith('image/')" class="h-16 w-16 bg-gray-100 rounded flex items-center justify-center">
-      <span class="text-xs">{{ file.name }}</span>
-    </div>
-    <button (click)="removeAttachment(file)" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full h-5 w-5 flex items-center justify-center">
-      <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+    <!-- Video call button -->
+    <button (click)="startVideoCall()"
+            class="p-2 rounded-full text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+            [disabled]="isUploading">
+      <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
       </svg>
     </button>
   </div>
