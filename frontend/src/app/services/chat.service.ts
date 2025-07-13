@@ -45,4 +45,17 @@ export class ChatService {
     formData.append('file', file);
     return this.http.post<Attachment>(`${this.apiUrl}/attachments`, formData);
   }
+
+  createPrivateConversation(participantId: number): Observable<Conversation> {
+    return this.http.post<Conversation>(`${this.apiUrl}/conversations/private`, {
+      participantId
+    });
+  }
+
+  createGroupConversation(name: string, participantIds: number[]): Observable<Conversation> {
+    return this.http.post<Conversation>(`${this.apiUrl}/conversations/group`, {
+      name,
+      participantIds
+    });
+  }
 }

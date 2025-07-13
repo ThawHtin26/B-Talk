@@ -8,6 +8,7 @@ import { MessageListComponent } from '../message-list/message-list.component';
 import { MessageInputComponent } from '../message-input/message-input.component';
 import { VideoCallComponent } from '../video-call/video-call.component';
 import { Subscription } from 'rxjs';
+import { ConversationCreateComponent } from '../conversation-create/conversation-create.component';
 
 @Component({
   selector: 'app-chat-container',
@@ -17,7 +18,8 @@ import { Subscription } from 'rxjs';
     ConversationListComponent,
     MessageListComponent,
     MessageInputComponent,
-    VideoCallComponent
+    VideoCallComponent,
+    ConversationCreateComponent
   ],
   templateUrl: './chat-container.component.html',
   styleUrls: ['./chat-container.component.scss']
