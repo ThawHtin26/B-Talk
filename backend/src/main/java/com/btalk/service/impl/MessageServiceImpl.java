@@ -1,13 +1,16 @@
 package com.btalk.service.impl;
 
+import com.btalk.constants.MessageType;
 import com.btalk.dto.*;
 import com.btalk.entity.*;
+import com.btalk.exceptions.ResourceNotFoundException;
 import com.btalk.repository.*;
 import com.btalk.service.MessageService;
 import com.btalk.service.UserService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -45,6 +48,7 @@ public class MessageServiceImpl implements MessageService {
         message.setSenderId(messageDto.getSenderId());
         message.setContent(messageDto.getContent());
         message.setMessageType(messageDto.getMessageType());
+        message.setSentAt(LocalDateTime.now());
         message = messageRepository.save(message);
         
         // Save attachments if any
@@ -156,5 +160,21 @@ public class MessageServiceImpl implements MessageService {
             messageReadRepository.save(messageRead);
         }
     }
-
+    
+    @Override
+    public MessageDto getMessage(Long messageId) {
+        Message message = messageRepository.findById(messageId)
+                .orElseThrow(() -> new ResourceNotFoundException("Message not found with id: " + messageId));
+        
+        MessageDto messageDto = new MessageDto();
+        messageDto.setMessageId(message.getMessageId());
+        messageDto.setConversationId(message.getConversationId());
+        messageDto.setSenderId(message.getSenderId());
+        UserDto sender = userService.getUserById(message.getSenderId());
+        messageDto.setSenderName(sender.getName());
+        messageDto.setContent(message.getContent());
+        messageDto.setMessageType(message.getMessageType());
+        messageDto.setSentAt(messageDto.getSentAt());
+        return messageDto;
+    }
 }

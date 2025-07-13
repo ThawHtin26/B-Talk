@@ -8,5 +8,4 @@ public class AttachmentDto {
     private String fileUrl;
     private String fileType;
     private Long fileSizeBytes;
-    private String thumbnailUrl;
 }

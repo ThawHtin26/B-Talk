@@ -13,7 +13,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.btalk.entity.User;
 import com.btalk.repository.UserRepository;
-import com.btalk.utils.JwtTokenUtil;
+import com.btalk.utils.JwtTokenUtils;
 
 import java.io.IOException;
 
@@ -21,7 +21,7 @@ import java.io.IOException;
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    private final JwtTokenUtil jwtTokenUtil;
+    private final JwtTokenUtils jwtTokenUtil;
     private final UserRepository userRepository;
 
     @Override

@@ -28,7 +28,7 @@ import com.btalk.entity.User;
 import com.btalk.exceptions.UserAlreadyExistsException;
 import com.btalk.repository.UserRepository;
 import com.btalk.service.AuthService;
-import com.btalk.utils.JwtTokenUtil;
+import com.btalk.utils.JwtTokenUtils;
 
 import ch.qos.logback.core.util.StringUtil;
 
@@ -38,7 +38,7 @@ public class AuthServiceImpl implements AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
-    private final JwtTokenUtil jwtTokenUtil;
+    private final JwtTokenUtils jwtTokenUtil;
 
     @Override
     public AuthResponse register(RegisterRequest registerRequest) {

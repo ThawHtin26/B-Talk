@@ -6,6 +6,7 @@ import java.util.List;
 
 public interface MessageService {
     MessageDto sendMessage(MessageDto messageDto);
+    MessageDto getMessage(Long messageId);
     List<MessageDto> getConversationMessages(Long conversationId, Long userId);
     List<MessageDto> getUnreadMessages(Long conversationId, Long userId);
     List<MessageDto> getNewMessages(Long conversationId, Long userId, LocalDateTime after);

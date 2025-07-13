@@ -18,4 +18,7 @@ public interface ParticipantRepository extends JpaRepository<Participant, Long> 
     void leaveConversation(@Param("conversationId") Long conversationId, @Param("userId") Long userId);
     
     boolean existsByConversationIdAndUserId(Long conversationId, Long userId);
+    
+    @Query("SELECT p.userId FROM Participant p WHERE p.conversationId = :conversationId")
+    List<Long> findUserIdsByConversationId(@Param("conversationId") Long conversationId);
 }

@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 public interface MessageRepository extends JpaRepository<Message, Long> {
     List<Message> findByConversationIdOrderBySentAtDesc(Long conversationId);
@@ -28,4 +29,6 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
     List<Message> findUnreadMessagesAfter(@Param("conversationId") Long conversationId, 
                                          @Param("userId") Long userId, 
                                          @Param("after") LocalDateTime after);
+    
+    Optional<Message> findTopByConversationIdOrderBySentAtDesc(Long conversationId);
 }

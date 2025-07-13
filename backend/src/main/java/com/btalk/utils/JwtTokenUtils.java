@@ -19,7 +19,7 @@ import java.util.Map;
 import java.util.function.Function;
 
 @Component
-public class JwtTokenUtil {
+public class JwtTokenUtils {
     @Value("${jwt.secret}")
     private String secret;
 
@@ -75,7 +75,7 @@ public class JwtTokenUtil {
     }
 
     public String extractUsername(String token) {
-        return extractClaim(token, Claims::getSubject);
+        return extractAllClaims(token).getSubject();
     }
 
     public Date extractExpiration(String token) {

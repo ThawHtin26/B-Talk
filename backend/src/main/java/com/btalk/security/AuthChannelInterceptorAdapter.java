@@ -1,47 +1,40 @@
 package com.btalk.security;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import com.btalk.utils.JwtTokenUtils;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
-import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.messaging.support.MessageHeaderAccessor;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Component;
 
-import com.btalk.utils.JwtTokenUtil;
-
+@Slf4j
 @Component
+@RequiredArgsConstructor
 public class AuthChannelInterceptorAdapter implements ChannelInterceptor {
 
-    @Autowired
-    private JwtTokenUtil jwtTokenUtil;
-
-    @Autowired
-    private UserDetailsService userDetailsService;
+    private final JwtTokenUtils jwtTokenUtil;
 
     @Override
     public Message<?> preSend(Message<?> message, MessageChannel channel) {
-        StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
-        
-        if (StompCommand.CONNECT.equals(accessor.getCommand())) {
-            String token = accessor.getFirstNativeHeader("Authorization");
-            
-            if (token != null && token.startsWith("Bearer ")) {
-                token = token.substring(7);
-                
-                String username = jwtTokenUtil.extractUsername(token);
-                if (username != null) {
-                    UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-                    if (jwtTokenUtil.validateToken(token, userDetails)) {
-                        accessor.setUser(() -> username); // associate the user with the session
+        try {
+            StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
+            if (accessor != null && accessor.getCommand() != null) {
+                if (accessor.getCommand().toString().equals("CONNECT")) {
+                    String token = accessor.getFirstNativeHeader("Authorization");
+                    if (token != null && token.startsWith("Bearer ")) {
+                        token = token.substring(7); // Remove "Bearer "
+                        String username = jwtTokenUtil.extractUsername(token);
+                        log.info("Authenticated WebSocket user: {}", username);
+                        // Optionally set user on accessor if needed
                     }
                 }
             }
+        } catch (Exception ex) {
+            log.error("Error during WebSocket authentication", ex);
         }
         return message;
     }
-
 }

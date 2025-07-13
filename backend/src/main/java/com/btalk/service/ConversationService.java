@@ -11,4 +11,6 @@ public interface ConversationService {
     List<ConversationDto> getUserConversations(Long userId);
     ConversationDto getConversationDetails(Long conversationId, Long userId);
     void leaveConversation(Long conversationId, Long userId);
+    MessageDto getConversationById(Long conversationId);
+    
 }
