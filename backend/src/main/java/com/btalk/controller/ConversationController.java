@@ -39,6 +39,7 @@ public class ConversationController {
             List<Long> participants = List.of(creatorId, participantId);
             for (Long userId : participants) {
             	// Ensure this matches what frontend expects
+            	log.info("📤 Sending conversation update to userId={}", userId);
             	messagingTemplate.convertAndSendToUser(
             	    userId.toString(),
             	    "/queue/conversation-updates",  // Changed from "/queue/conversations"
@@ -77,7 +78,7 @@ public class ConversationController {
             for (Long participantId : allParticipants) {
                 messagingTemplate.convertAndSendToUser(
                     participantId.toString(),
-                    "/queue/conversations-updates",
+                    "/queue/conversation-updates",
                     ApiResponse.success(
                         "New group conversation created",
                         Map.of(

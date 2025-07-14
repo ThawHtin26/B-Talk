@@ -6,6 +6,8 @@ import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
@@ -25,6 +27,7 @@ public class JwtTokenUtils {
 
     @Value("${jwt.expiration}")
     private long expiration;
+    
 
     public String generateToken(User user) {
         try {
@@ -45,7 +48,7 @@ public class JwtTokenUtils {
         }
     }
 
-    private Claims extractAllClaims(String token) {
+    public Claims extractAllClaims(String token) {
         try {
             return Jwts.parserBuilder()
                     .setSigningKey(getSignKey())

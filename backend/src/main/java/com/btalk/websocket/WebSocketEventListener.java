@@ -11,7 +11,9 @@ import java.util.List;
 import org.springframework.context.event.EventListener;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.stereotype.Component;
+import org.springframework.web.socket.messaging.SessionConnectEvent;
 import org.springframework.web.socket.messaging.SessionConnectedEvent;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 import lombok.RequiredArgsConstructor;
@@ -88,4 +90,14 @@ public class WebSocketEventListener {
             log.error("Error handling disconnect event: {}", e.getMessage());
         }
     }
+    
+    @EventListener
+    public void handleSessionConnected(SessionConnectEvent event) {
+        StompHeaderAccessor accessor = StompHeaderAccessor.wrap(event.getMessage());
+
+        Principal user = accessor.getUser(); // must not be null
+        log.info("WebSocket connected: {}", user != null ? user.getName() : "null");
+    }
+
+
 }
