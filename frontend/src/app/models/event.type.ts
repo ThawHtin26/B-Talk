@@ -1,5 +1,5 @@
-import { Message } from "@stomp/stompjs";
 import { Conversation } from "./conversation";
+import { Message } from "./message";
 
 export interface NewMessageEvent {
   eventType: 'NEW_MESSAGE';
@@ -8,6 +8,6 @@ export interface NewMessageEvent {
 }
 
 export interface ConversationUpdatedEvent {
-  eventType: 'CONVERSATION_UPDATED';
+  eventType: 'NEW_CONVERSATION';
   conversation: Conversation;
 }

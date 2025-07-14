@@ -23,37 +23,71 @@
     </div>
   </div>
 
-  <!-- Conversation list -->
-  <div class="flex-1 overflow-y-auto">
-    <ng-container *ngIf="filteredConversations$ | async as conversations">
-      <div *ngFor="let conv of conversations"
-           class="p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer flex items-center"
-           (click)="selectConversation(conv)">
-        <img [src]="conv.participants[0].user?.profilePhotoUrl || 'assets/default-avatar.png'"
-             class="h-10 w-10 rounded-full mr-3">
-        <div class="flex-1">
-          <div class="font-medium">{{conv.name || conv.participants[0].user?.name}}</div>
-          <div class="text-sm text-gray-500" *ngIf="conv.lastMessage">
-            {{conv.lastMessage.content | truncate:30}}
-          </div>
-        </div>
-        <div class="text-xs text-gray-400" *ngIf="conv.lastMessage">
-          {{conv.lastMessage.sentAt| date:'shortTime'}}
-        </div>
+<!-- Conversation list -->
+<div class="flex-1 overflow-y-auto">
+  <!-- Loading state -->
+  <div *ngIf="isLoading" class="p-4 text-center text-gray-500">
+    <div class="animate-pulse flex space-x-4 items-center p-3">
+      <div class="rounded-full bg-gray-200 h-10 w-10"></div>
+      <div class="flex-1 space-y-2">
+        <div class="h-4 bg-gray-200 rounded w-3/4"></div>
+        <div class="h-3 bg-gray-200 rounded w-1/2"></div>
       </div>
-      <div *ngIf="conversations.length === 0 && !isLoading" class="p-4 text-center text-gray-500">
-        No conversations found
-      </div>
-    </ng-container>
-    <div *ngIf="isLoading" class="p-4 text-center text-gray-500">
-      Loading conversations...
     </div>
+    <div class="text-sm">Loading conversations...</div>
   </div>
+
+  <!-- Conversation list -->
+  <ng-container *ngIf="!(isLoading) && (filteredConversations$ | async) as conversations">
+    <!-- Empty state -->
+    <div *ngIf="conversations.length === 0" class="p-4 text-center text-gray-500">
+      <div class="mb-2">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+        </svg>
+      </div>
+      No conversations found
+      <div *ngIf="searchTerm.trim()" class="text-sm mt-1">Try a different search term</div>
+    </div>
+
+    <!-- Conversation items -->
+    <div *ngFor="let conv of conversations"
+         class="p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer flex items-center"
+         [class.bg-blue-50]="chatService.activeConversation$ | async | isActiveConversation:conv"
+         (click)="selectConversation(conv)">
+
+      <!-- Avatar - handles group chats and 1:1 chats -->
+      <div class="relative mr-3">
+        <img [src]="getConversationAvatar(conv)"
+             class="h-10 w-10 rounded-full object-cover"
+             [alt]="getConversationName(conv)">
+        <span *ngIf="hasUnreadMessages(conv)"
+              class="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-blue-500 ring-2 ring-white"></span>
+      </div>
+
+      <div class="flex-1 min-w-0">
+        <div class="font-medium truncate">{{getConversationName(conv)}}</div>
+        <div class="text-sm text-gray-500 truncate" *ngIf="conv.lastMessage">
+          <span *ngIf="conv.lastMessage.senderId === authService.getCurrentUser()?.userId">You: </span>
+          {{conv.lastMessage.content | truncate:30}}
+        </div>
+      </div>
+
+      <div class="flex flex-col items-end ml-2">
+        <div class="text-xs text-gray-400 whitespace-nowrap" *ngIf="conv.lastMessage">
+          {{conv.lastMessage.sentAt | date:'shortTime'}}
+        </div>
+        <span *ngIf="hasUnreadMessages(conv)" class="text-xs text-blue-500 mt-1">
+          {{getUnreadCount(conv)}}
+        </span>
+      </div>
+    </div>
+  </ng-container>
+</div>
 
   <!-- Conversation creation modal -->
   <app-conversation-create
     #createModal
-    [(showModal)]="createModal.showModal"
-    (conversationCreated)="onConversationCreated()">
+    [(showModal)]="createModal.showModal">
   </app-conversation-create>
 </div>

@@ -7,8 +7,6 @@ import { ChatService } from '../../services/chat.service';
 import { WebSocketService } from '../../services/web-socket.service';
 import { AuthService } from '../../services/auth.service';
 import { ApiResponse } from '../../models/api-response';
-import { Conversation } from '../../models/conversation';
-import { Message } from '../../models/message';
 import { ConversationUpdatedEvent, NewMessageEvent } from '../../models/event.type';
 
 import { ConversationListComponent } from '../conversation-list/conversation-list.component';
@@ -80,7 +78,7 @@ export class ChatContainerComponent implements OnInit, OnDestroy {
         takeUntil(this.destroy$)
       ).subscribe({
         next: (response) => {
-          if (response.success && response.data?.eventType === 'CONVERSATION_UPDATED') {
+          if (response.success && response.data?.eventType === 'NEW_CONVERSATION') {
             this.chatService.updateConversationInLocalState(response.data.conversation);
           }
         },

@@ -1,9 +1,8 @@
-// web-socket.service.ts
 import { Injectable, inject, OnDestroy } from '@angular/core';
 import { AuthService } from './auth.service';
 import { environment } from '../../environments/environment';
-import { Observable, Subject, BehaviorSubject, timer, EMPTY } from 'rxjs';
-import { filter, switchMap, take, catchError, map, tap, takeUntil } from 'rxjs/operators';
+import { Observable, Subject, BehaviorSubject, timer } from 'rxjs';
+import { filter, switchMap, take, takeUntil } from 'rxjs/operators';
 import {
   Client,
   IMessage as StompIMessage,
@@ -11,15 +10,18 @@ import {
 } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import { ApiResponse } from '../models/api-response';
-import { Message } from '../models/message';
-import { Conversation } from '../models/conversation';
-import { ConversationUpdatedEvent, NewMessageEvent } from '../models/event.type';
+import {
+  ConversationUpdatedEvent,
+  NewMessageEvent,
+} from '../models/event.type';
 
 @Injectable({ providedIn: 'root' })
 export class WebSocketService implements OnDestroy {
   private authService = inject(AuthService);
   private stompClient!: Client;
   private connectionStatus = new BehaviorSubject<boolean>(false);
+  private _connected$ = new BehaviorSubject<boolean>(false);
+  public connected$ = this._connected$.asObservable();
   private pendingSubscriptions: Array<{
     destination: string;
     subject: Subject<any>;
@@ -45,10 +47,12 @@ export class WebSocketService implements OnDestroy {
   }
 
   private initializeConnection(): void {
+    const token = this.authService.getToken();
+
     this.stompClient = new Client({
       webSocketFactory: () => new SockJS(`${environment.wsUrl}/ws`),
       connectHeaders: {
-        Authorization: `Bearer ${this.authService.getToken()}`,
+        Authorization: `Bearer ${token}`,
       },
       debug: (str) => console.debug('[STOMP]', str),
       reconnectDelay: 0,
@@ -65,8 +69,11 @@ export class WebSocketService implements OnDestroy {
   }
 
   private handleConnect(): void {
+    console.log('WebSocket connected');
     this.reconnectAttempts = 0;
+    this._connected$.next(true);
     this.connectionStatus.next(true);
+
     this.pendingSubscriptions.forEach((sub) =>
       this.internalSubscribe(sub.destination, sub.subject)
     );
@@ -80,11 +87,12 @@ export class WebSocketService implements OnDestroy {
 
   private handleDisconnection(): void {
     this.connectionStatus.next(false);
+    this._connected$.next(false);
+
     if (this.reconnectAttempts++ < this.maxReconnectAttempts) {
-      setTimeout(
-        () => !this.stompClient.active && this.stompClient.activate(),
-        this.reconnectInterval
-      );
+      setTimeout(() => {
+        if (!this.stompClient.active) this.stompClient.activate();
+      }, this.reconnectInterval);
     }
   }
 
@@ -108,6 +116,7 @@ export class WebSocketService implements OnDestroy {
   private internalSubscribe(destination: string, subject: Subject<any>): void {
     if (!this.stompClient.connected) return;
 
+    const token = this.authService.getToken();
     const subscription = this.stompClient.subscribe(
       destination,
       (msg: StompIMessage) => {
@@ -118,7 +127,9 @@ export class WebSocketService implements OnDestroy {
           subject.error(e);
         }
       },
-      { Authorization: `Bearer ${this.authService.getToken()}` }
+      {
+        Authorization: `Bearer ${token}`,
+      }
     );
 
     this.subscriptions.set(destination, { subject, subscription });
@@ -156,55 +167,63 @@ export class WebSocketService implements OnDestroy {
     }
   }
 
-// In your WebSocketService
-listenForConversationUpdates(): Observable<ApiResponse<ConversationUpdatedEvent>> {
-  return new Observable<ApiResponse<ConversationUpdatedEvent>>(subscriber => {
-    const subscription = this.stompClient.subscribe(
-      '/queue/conversation-updates',
-      (message) => {
-        try {
-          const parsed: ApiResponse<ConversationUpdatedEvent> = JSON.parse(message.body);
-          subscriber.next(parsed);
-        } catch (error) {
-          subscriber.error(error);
-        }
-      }
-    );
-    return () => subscription.unsubscribe();
-  });
-}
+  listenForConversationUpdates(): Observable<
+    ApiResponse<ConversationUpdatedEvent>
+  > {
+    console.log('📡 Subscribing to /user/queue/conversation-updates');
 
-listenForMessageUpdates(conversationId: number): Observable<ApiResponse<NewMessageEvent>> {
-  return new Observable<ApiResponse<NewMessageEvent>>(subscriber => {
-    const subscription = this.stompClient.subscribe(
-      `/topic/conversation/${conversationId}/messages`,
-      (message) => {
-        try {
-          const parsed: ApiResponse<NewMessageEvent> = JSON.parse(message.body);
-          subscriber.next(parsed);
-        } catch (error) {
-          subscriber.error(error);
-        }
-      }
-    );
-    return () => subscription.unsubscribe();
-  });
-}
-
-  private parseMessage<T = any>(response: any): ApiResponse<T> {
-    if (typeof response === 'string') {
-      try {
-        return JSON.parse(response) as ApiResponse<T>;
-      } catch (e) {
-        console.error('Parse error:', e, 'Input:', response);
-        return {
-          success: false,
-          message: 'Failed to parse server response',
-          data: null as any as T,
+    return new Observable<ApiResponse<ConversationUpdatedEvent>>(
+      (subscriber) => {
+        const token = this.authService.getToken();
+        const subscription = this.stompClient.subscribe(
+          '/user/queue/conversation-updates',
+          (message) => {
+            console.log('received conversation update:', message.body);
+            try {
+              const parsed: ApiResponse<ConversationUpdatedEvent> = JSON.parse(
+                message.body
+              );
+              subscriber.next(parsed);
+            } catch (error) {
+              console.error('Error parsing conversation update:', error);
+              subscriber.error(error);
+            }
+          },
+          {
+            Authorization: `Bearer ${token}`, // important!
+          }
+        );
+        return () => {
+          console.log('Unsubscribing from conversation updates');
+          subscription.unsubscribe();
         };
       }
-    }
-    return response as ApiResponse<T>;
+    );
+  }
+
+  listenForMessageUpdates(
+    conversationId: number
+  ): Observable<ApiResponse<NewMessageEvent>> {
+    return new Observable<ApiResponse<NewMessageEvent>>((subscriber) => {
+      const token = this.authService.getToken();
+      const subscription = this.stompClient.subscribe(
+        `/topic/conversation/${conversationId}/messages`,
+        (message) => {
+          try {
+            const parsed: ApiResponse<NewMessageEvent> = JSON.parse(
+              message.body
+            );
+            subscriber.next(parsed);
+          } catch (error) {
+            subscriber.error(error);
+          }
+        },
+        {
+          Authorization: `Bearer ${token}`,
+        }
+      );
+      return () => subscription.unsubscribe();
+    });
   }
 
   disconnect(): void {
@@ -212,6 +231,10 @@ listenForMessageUpdates(conversationId: number): Observable<ApiResponse<NewMessa
       info.subscription?.unsubscribe();
       info.subject.complete();
     });
+    this.stompClient.onDisconnect = () => {
+      console.log('Disconnected from WebSocket');
+      this._connected$.next(false);
+    };
     this.subscriptions.clear();
     this.pendingSubscriptions = [];
     this.stompClient.deactivate();

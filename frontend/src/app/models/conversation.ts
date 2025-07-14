@@ -9,5 +9,5 @@ export interface Conversation {
   createdAt: string;
   participants: Participant[];
   lastMessage?: Message;
-  unreadCount?: number;
+  unreadCount: number;
 }

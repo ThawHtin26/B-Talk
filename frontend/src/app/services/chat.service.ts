@@ -1,25 +1,30 @@
+import { NewMessageEvent } from './../models/event.type';
 import { ApiResponse } from './../models/api-response';
 import { Injectable, inject, OnDestroy } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable, Subject, Subscription, throwError } from 'rxjs';
-import { catchError, filter, map, tap, takeUntil } from 'rxjs/operators';
+import {
+  BehaviorSubject,
+  Observable,
+  Subject,
+  Subscription,
+  throwError,
+} from 'rxjs';
+import {
+  catchError,
+  filter,
+  map,
+  tap,
+  takeUntil,
+  take,
+  switchMap,
+} from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 import { Conversation } from '../models/conversation';
 import { Message, MessageType } from '../models/message';
 import { AuthService } from './auth.service';
 import { WebSocketService } from './web-socket.service';
 import { Attachment } from '../models/attachment';
-
-interface ConversationUpdatedEvent {
-  eventType: 'CONVERSATION_UPDATED';
-  conversation: Conversation;
-}
-
-interface NewMessageEvent {
-  eventType: 'NEW_MESSAGE';
-  message: Message;
-  conversationId?: number;
-}
+import { ConversationUpdatedEvent } from '../models/event.type';
 
 @Injectable({ providedIn: 'root' })
 export class ChatService implements OnDestroy {
@@ -35,7 +40,7 @@ export class ChatService implements OnDestroy {
   private _activeConversation = new BehaviorSubject<Conversation | null>(null);
   private _messages = new BehaviorSubject<{ [key: number]: Message[] }>({});
   private _messageUpdates = new Subject<Message>();
-  public _conversationUpdates = new Subject<Conversation>();
+  private _conversationUpdates = new Subject<Conversation>();
 
   // Public observables
   conversations$ = this._conversations.asObservable();
@@ -44,9 +49,18 @@ export class ChatService implements OnDestroy {
   messageUpdates$ = this._messageUpdates.asObservable();
   conversationUpdates$ = this._conversationUpdates.asObservable();
 
+
   constructor() {
-    // Initialize WebSocket listeners when active conversation is set
-    this.activeConversation$.subscribe(conv => {
+    this.webSocketService.connected$
+      .pipe(
+        filter((connected) => connected),
+        take(1) // Only once
+      )
+      .subscribe(() => {
+        this.initializeGlobalConversationUpdates();
+      });
+
+    this.activeConversation$.subscribe((conv) => {
       if (conv) {
         this.setupRealTimeListeners(conv.conversationId);
       }
@@ -59,6 +73,29 @@ export class ChatService implements OnDestroy {
     this.subscriptions.unsubscribe();
   }
 
+  private initializeGlobalConversationUpdates(): void {
+    this.webSocketService
+      .listenForConversationUpdates()
+      .pipe(
+        filter(
+          (response): response is ApiResponse<ConversationUpdatedEvent> =>
+            response.success &&
+            response.data?.eventType === 'NEW_CONVERSATION' &&
+            !!response.data.conversation
+        )
+      )
+      .subscribe({
+        next: (response) => {
+          console.log(
+            'New conversation from WebSocket:',
+            response.data.conversation
+          );
+          this.notifyNewConversation(response.data.conversation);
+        },
+        error: (err) => console.error('WebSocket error:', err),
+      });
+  }
+
   private setupRealTimeListeners(conversationId: number): void {
     // Clear previous subscriptions
     this.subscriptions.unsubscribe();
@@ -69,17 +106,21 @@ export class ChatService implements OnDestroy {
       .listenForConversationUpdates()
       .pipe(
         filter(
-          (response: ApiResponse<any>): response is ApiResponse<ConversationUpdatedEvent> =>
+          (
+            response: ApiResponse<any>
+          ): response is ApiResponse<ConversationUpdatedEvent> =>
             response.success &&
-            response.data?.eventType === 'CONVERSATION_UPDATED' &&
+            response.data?.eventType === 'NEW_CONVERSATION' &&
             !!response.data.conversation
         ),
         takeUntil(this.destroy$)
       )
       .subscribe({
         next: (response) => {
-          this.updateConversationInLocalState(response.data.conversation);
-          this._conversationUpdates.next(response.data.conversation);
+          this.notifyNewConversation(response.data.conversation);
+          if (response.data.conversation) {
+            this.updateConversationInLocalState(response.data.conversation);
+          }
         },
         error: (err) => console.error('Conversation update error:', err),
       });
@@ -89,7 +130,9 @@ export class ChatService implements OnDestroy {
       .listenForMessageUpdates(conversationId)
       .pipe(
         filter(
-          (response: ApiResponse<any>): response is ApiResponse<NewMessageEvent> =>
+          (
+            response: ApiResponse<any>
+          ): response is ApiResponse<NewMessageEvent> =>
             response.success &&
             response.data?.eventType === 'NEW_MESSAGE' &&
             !!response.data.message
@@ -114,20 +157,28 @@ export class ChatService implements OnDestroy {
     const userId = this.authService.getCurrentUser()?.userId;
     if (!userId) return throwError(() => new Error('User not authenticated'));
 
-    return this.http.get<ApiResponse<Message[]>>(
-      `${this.apiUrl}/messages/conversation/${conversationId}`,
-      { params: { userId: userId.toString() } }
-    ).pipe(
-      tap(response => {
-        if (response.success && response.data) {
-          this.updateMessagesState(conversationId, response.data);
-        }
-      }),
-      catchError(error => this.handleError('Failed to load messages', error))
-    );
+    return this.http
+      .get<ApiResponse<Message[]>>(
+        `${this.apiUrl}/messages/conversation/${conversationId}`,
+        { params: { userId: userId.toString() } }
+      )
+      .pipe(
+        tap((response) => {
+          if (response.success && response.data) {
+            this.updateMessagesState(conversationId, response.data);
+          }
+        }),
+        catchError((error) =>
+          this.handleError('Failed to load messages', error)
+        )
+      );
   }
 
-sendMessage(conversationId: number, content: string, attachments: File[] = []): Observable<ApiResponse<Message>> {
+  sendMessage(
+    conversationId: number,
+    content: string,
+    attachments: File[] = []
+  ): Observable<ApiResponse<Message>> {
     const userId = this.authService.getCurrentUser()?.userId;
     if (!userId) return throwError(() => new Error('User not authenticated'));
 
@@ -135,48 +186,54 @@ sendMessage(conversationId: number, content: string, attachments: File[] = []): 
 
     // Create message data
     const messageData = {
-        conversationId: conversationId,
-        senderId: userId,
-        content: content,
-        messageType: attachments.length > 0 ? 'MEDIA' : 'TEXT',
-        status: 'SENT',
-        sentAt: null,
-        messageId: null,
-        senderName: null,
-        attachments: []
+      conversationId: conversationId,
+      senderId: userId,
+      content: content,
+      messageType: attachments.length > 0 ? 'MEDIA' : 'TEXT',
+      status: 'SENT',
+      sentAt: null,
+      messageId: null,
+      senderName: null,
+      attachments: [],
     };
 
     // Append as raw JSON string with correct content type
     const messageBlob = new Blob([JSON.stringify(messageData)], {
-        type: 'application/json'
+      type: 'application/json',
     });
     formData.append('message', messageBlob);
 
     // Add attachments
-    attachments.forEach(file => {
-        formData.append('attachments', file, file.name);
+    attachments.forEach((file) => {
+      formData.append('attachments', file, file.name);
     });
 
-    return this.http.post<ApiResponse<Message>>(
-        `${this.apiUrl}/messages`,
-        formData
-    ).pipe(
-        tap(response => {
-            if (response.success && response.data) {
-                this.notifyNewMessage(response.data);
-            }
+    return this.http
+      .post<ApiResponse<Message>>(`${this.apiUrl}/messages`, formData)
+      .pipe(
+        tap((response) => {
+          if (response.success && response.data) {
+            this.notifyNewMessage(response.data);
+          }
         }),
-        catchError(error => this.handleError('Failed to send message', error))
-    );
-}
-  markMessagesAsRead(conversationId: number, userId: number): Observable<ApiResponse<void>> {
-    return this.http.post<ApiResponse<void>>(
-      `${this.apiUrl}/messages/read/conversation/${conversationId}`,
-      null,
-      { params: { userId: userId.toString() } }
-    ).pipe(
-      catchError(error => this.handleError('Failed to mark messages as read', error))
-    );
+        catchError((error) => this.handleError('Failed to send message', error))
+      );
+  }
+  markMessagesAsRead(
+    conversationId: number,
+    userId: number
+  ): Observable<ApiResponse<void>> {
+    return this.http
+      .post<ApiResponse<void>>(
+        `${this.apiUrl}/messages/read/conversation/${conversationId}`,
+        null,
+        { params: { userId: userId.toString() } }
+      )
+      .pipe(
+        catchError((error) =>
+          this.handleError('Failed to mark messages as read', error)
+        )
+      );
   }
 
   getConversations(): Observable<ApiResponse<Conversation[]>> {
@@ -184,34 +241,54 @@ sendMessage(conversationId: number, content: string, attachments: File[] = []): 
     if (!userId) return throwError(() => this.createAuthError());
 
     return this.http
-      .get<ApiResponse<Conversation[]>>(`${this.apiUrl}/conversations/user/${userId}`)
+      .get<ApiResponse<Conversation[]>>(
+        `${this.apiUrl}/conversations/user/${userId}`
+      )
       .pipe(
         tap((response) => {
           if (response.success && response.data) {
             this._conversations.next(response.data);
           }
         }),
-        catchError((error) => this.handleError('Failed to load conversations', error))
+        catchError((error) =>
+          this.handleError('Failed to load conversations', error)
+        )
       );
   }
 
-  createPrivateConversation(participantId: number): Observable<ApiResponse<Conversation>> {
+  createPrivateConversation(
+    participantId: number
+  ): Observable<ApiResponse<Conversation>> {
     const userId = this.authService.getCurrentUser()?.userId;
     if (!userId) return throwError(() => this.createAuthError());
 
-    return this.http.post<ApiResponse<Conversation>>(
-      `${this.apiUrl}/conversations/private`,
-      null,
-      {
-        params: {
-          creatorId: userId.toString(),
-          participantId: participantId.toString()
+    return this.http
+      .post<ApiResponse<Conversation>>(
+        `${this.apiUrl}/conversations/private`,
+        null,
+        {
+          params: {
+            creatorId: userId.toString(),
+            participantId: participantId.toString(),
+          },
         }
-      }
-    );
+      )
+      .pipe(
+        tap((response) => {
+          if (response.success && response.data) {
+            this.notifyNewConversation(response.data);
+          }
+        }),
+        catchError((error) =>
+          this.handleError('Failed to Create privaet converstaion', error)
+        )
+      );
   }
 
-  createGroupConversation(name: string, participantIds: number[]): Observable<ApiResponse<Conversation>> {
+  createGroupConversation(
+    name: string,
+    participantIds: number[]
+  ): Observable<ApiResponse<Conversation>> {
     const userId = this.authService.getCurrentUser()?.userId;
     if (!userId) return throwError(() => this.createAuthError());
 
@@ -219,16 +296,27 @@ sendMessage(conversationId: number, content: string, attachments: File[] = []): 
       participantIds = [...participantIds, userId];
     }
 
-    return this.http.post<ApiResponse<Conversation>>(
-      `${this.apiUrl}/conversations/group`,
-      participantIds,
-      {
-        params: {
-          creatorId: userId.toString(),
-          name: name
+    return this.http
+      .post<ApiResponse<Conversation>>(
+        `${this.apiUrl}/conversations/group`,
+        participantIds,
+        {
+          params: {
+            creatorId: userId.toString(),
+            name: name,
+          },
         }
-      }
-    );
+      )
+      .pipe(
+        tap((response) => {
+          if (response.success && response.data) {
+            this.notifyNewConversation(response.data);
+          }
+        }),
+        catchError((error) =>
+          this.handleError('Failed to create group converstaion', error)
+        )
+      );
   }
 
   setActiveConversation(conversation: Conversation | null): void {
@@ -240,7 +328,9 @@ sendMessage(conversationId: number, content: string, attachments: File[] = []): 
 
   public updateConversationInLocalState(conversation: Conversation): void {
     const currentConversations = this._conversations.value;
-    const existingIndex = currentConversations.findIndex(c => c.conversationId === conversation.conversationId);
+    const existingIndex = currentConversations.findIndex(
+      (c) => c.conversationId === conversation.conversationId
+    );
 
     if (existingIndex >= 0) {
       const updated = [...currentConversations];
@@ -256,8 +346,14 @@ sendMessage(conversationId: number, content: string, attachments: File[] = []): 
     }
   }
 
-  private updateMessagesState(conversationId: number, messages: Message[]): void {
-    this._messages.next({ ...this._messages.value, [conversationId]: messages });
+  private updateMessagesState(
+    conversationId: number,
+    messages: Message[]
+  ): void {
+    this._messages.next({
+      ...this._messages.value,
+      [conversationId]: messages,
+    });
   }
 
   private notifyNewMessage(message: Message): void {
@@ -265,17 +361,26 @@ sendMessage(conversationId: number, content: string, attachments: File[] = []): 
     this.addMessageToLocalState(message);
   }
 
+notifyNewConversation(newConv: Conversation): void {
+  this.updateConversationInLocalState(newConv);
+}
+
+
+
   private addMessageToLocalState(message: Message): void {
     const current = this._messages.value;
     this._messages.next({
       ...current,
-      [message.conversationId]: [...(current[message.conversationId] || []), message],
+      [message.conversationId]: [
+        ...(current[message.conversationId] || []),
+        message,
+      ],
     });
   }
 
   public updateLastMessageInLocalState(message: Message): void {
     this._conversations.next(
-      this._conversations.value.map(conv =>
+      this._conversations.value.map((conv) =>
         conv.conversationId === message.conversationId
           ? { ...conv, lastMessage: message }
           : conv
@@ -289,6 +394,8 @@ sendMessage(conversationId: number, content: string, attachments: File[] = []): 
 
   private handleError(message: string, error: any): Observable<never> {
     console.error(message, error);
-    return throwError(() => ({ success: false, message, data: null } as ApiResponse<null>));
+    return throwError(
+      () => ({ success: false, message, data: null } as ApiResponse<null>)
+    );
   }
 }

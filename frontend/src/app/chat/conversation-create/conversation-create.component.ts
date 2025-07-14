@@ -19,7 +19,7 @@ import { Conversation } from '../../models/conversation';
 export class ConversationCreateComponent implements OnInit {
   @Input() showModal = false;
   @Output() showModalChange = new EventEmitter<boolean>();
-  @Output() conversationCreated = new EventEmitter<Conversation>();
+  // @Output() conversationCreated = new EventEmitter<Conversation>();
 
   private chatService = inject(ChatService);
   private userService = inject(UserService);
@@ -164,7 +164,7 @@ export class ConversationCreateComponent implements OnInit {
     ).subscribe({
       next: (response: ApiResponse<Conversation>) => {
         if (response.success && response.data) {
-          this.conversationCreated.emit(response.data);
+          // this.conversationCreated.emit(response.data);
           this.closeModal();
         } else {
           this.error = response.message || 'Failed to create conversation';

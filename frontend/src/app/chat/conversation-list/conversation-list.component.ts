@@ -7,6 +7,8 @@ import { ConversationCreateComponent } from '../conversation-create/conversation
 import { ApiResponse } from '../../models/api-response';
 import { Observable, Subscription, map } from 'rxjs';
 import { TruncatePipe } from '../../pipes/truncate.pipe';
+import { AuthService } from '../../services/auth.service';
+import { IsActiveConversationPipe } from '../../pipes/active-conversation.pipe';
 
 @Component({
   selector: 'app-conversation-list',
@@ -16,12 +18,14 @@ import { TruncatePipe } from '../../pipes/truncate.pipe';
     CommonModule,
     FormsModule,
     ConversationCreateComponent,
+    IsActiveConversationPipe,
   ],
   templateUrl: './conversation-list.component.html',
   styleUrls: ['./conversation-list.component.scss'],
 })
 export class ConversationListComponent implements OnInit, OnDestroy {
-  private chatService = inject(ChatService);
+  public chatService = inject(ChatService);
+  public authService = inject(AuthService);
   private subscriptions = new Subscription();
 
   searchTerm = '';
@@ -36,9 +40,7 @@ export class ConversationListComponent implements OnInit, OnDestroy {
       return conversations.filter(
         (conv) =>
           conv.name?.toLowerCase().includes(term) ||
-          conv.participants.some((p) =>
-            p.user?.name.toLowerCase().includes(term)
-          )
+          conv.participants.some((p) => p.userName.toLowerCase().includes(term))
       );
     })
   );
@@ -47,21 +49,19 @@ export class ConversationListComponent implements OnInit, OnDestroy {
     this.loadConversations();
 
     this.subscriptions.add(
-      this.chatService.conversations$.subscribe((conv) => {
-        console.log('Conversations updated:', conv);
+      this.conversations$.subscribe((conversations) => {
+        console.log('🔥 Updated conversations in UI:', conversations);
       })
     );
 
     this.subscriptions.add(
-    this.chatService.messageUpdates$.subscribe(message => {
-      if (message) {
-        // This will trigger the conversation list to update
-        this.chatService.updateLastMessageInLocalState(message);
-      }
-    })
-  );
-
-
+      this.chatService.messageUpdates$.subscribe((message) => {
+        if (message) {
+          // This will trigger the conversation list to update
+          this.chatService.updateLastMessageInLocalState(message);
+        }
+      })
+    );
   }
 
   ngOnDestroy(): void {
@@ -88,7 +88,31 @@ export class ConversationListComponent implements OnInit, OnDestroy {
     this.chatService.setActiveConversation(conversation);
   }
 
-  onConversationCreated(): void {
-    this.loadConversations();
+  // Add to your component class
+  getConversationAvatar(conv: Conversation): string {
+    if (conv.type === 'GROUP') {
+      return 'assets/default-avatar.png';
+    }
+    const otherParticipant = conv.participants.find(
+      (p) => p?.userId !== this.authService.getCurrentUser()?.userId
+    );
+    return 'assets/default-avatar.png';
+  }
+
+  getConversationName(conv: Conversation): string {
+    if (conv.name) return conv.name;
+    const otherParticipant = conv.participants.find(
+      (p) => p?.userId !== this.authService.getCurrentUser()?.userId
+    );
+    return otherParticipant?.userName || 'Unknown user';
+  }
+
+  hasUnreadMessages(conv: Conversation): boolean {
+    return conv.unreadCount > 0;
+  }
+
+  getUnreadCount(conv: Conversation): string {
+    if (!conv.unreadCount || conv.unreadCount <= 0) return '';
+    return conv.unreadCount > 9 ? '9+' : conv.unreadCount.toString();
   }
 }
