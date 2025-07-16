@@ -9,6 +9,7 @@ import { Observable, Subscription, map } from 'rxjs';
 import { TruncatePipe } from '../../pipes/truncate.pipe';
 import { AuthService } from '../../services/auth.service';
 import { IsActiveConversationPipe } from '../../pipes/active-conversation.pipe';
+import { ChatStateService } from '../../services/chat-state.service';
 
 @Component({
   selector: 'app-conversation-list',
@@ -26,6 +27,7 @@ import { IsActiveConversationPipe } from '../../pipes/active-conversation.pipe';
 export class ConversationListComponent implements OnInit, OnDestroy {
   public chatService = inject(ChatService);
   public authService = inject(AuthService);
+  private chatSateService = inject(ChatStateService);
   private subscriptions = new Subscription();
 
   searchTerm = '';
@@ -58,7 +60,7 @@ export class ConversationListComponent implements OnInit, OnDestroy {
       this.chatService.messageUpdates$.subscribe((message) => {
         if (message) {
           // This will trigger the conversation list to update
-          this.chatService.updateLastMessageInLocalState(message);
+          this.chatSateService.updateLastMessageInLocalState(message);
         }
       })
     );
@@ -88,7 +90,6 @@ export class ConversationListComponent implements OnInit, OnDestroy {
     this.chatService.setActiveConversation(conversation);
   }
 
-  // Add to your component class
   getConversationAvatar(conv: Conversation): string {
     if (conv.type === 'GROUP') {
       return 'assets/default-avatar.png';

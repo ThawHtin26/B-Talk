@@ -15,7 +15,7 @@ export interface Message {
   senderName?: string | null;  // Optional, might be added by server
   content: string;
   messageType: MessageType;
-  sentAt: string;     // Will be set by server
+  sentAt: Date;     // Will be set by server
   status: 'SENT' | 'DELIVERED' | 'SEEN';
   attachments: Attachment[];
 }

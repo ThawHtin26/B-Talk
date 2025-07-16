@@ -1,0 +1,31 @@
+<div class="media-viewer-container">
+  <!-- Header -->
+  <div class="media-viewer-header">
+    <span class="filename">{{ data.fileName }}</span>
+    <button mat-icon-button (click)="close()" aria-label="Close media viewer">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <!-- Media Content -->
+  <div class="media-content">
+    <ng-container *ngIf="data.mediaType?.startsWith('image/')">
+      <img [src]="data.mediaUrl" class="media-element" alt="Media content" />
+    </ng-container>
+
+    <ng-container *ngIf="data.mediaType?.startsWith('video/')">
+      <video controls autoplay class="media-element">
+        <source [src]="data.mediaUrl" [type]="data.mediaType" />
+        Your browser does not support the video tag.
+      </video>
+    </ng-container>
+  </div>
+
+  <!-- Footer -->
+  <div class="media-viewer-footer">
+    <a mat-button [href]="data.mediaUrl" [attr.download]="data.fileName" class="download-btn">
+      <mat-icon>download</mat-icon>
+      Download
+    </a>
+  </div>
+</div>
