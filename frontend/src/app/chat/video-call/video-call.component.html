@@ -1,10 +1,10 @@
 <div class="relative h-full w-full bg-black">
   <!-- Remote video -->
-  <video autoplay class="h-full w-full object-cover"></video>
+  <video #remoteVideo autoplay class="h-full w-full object-cover"></video>
 
   <!-- Local video -->
   <div class="absolute bottom-4 right-4 w-1/4 max-w-xs">
-    <video autoplay muted [class.opacity-0]="isVideoOff" class="w-full rounded-lg shadow-lg"></video>
+    <video #localVideo autoplay muted [class.opacity-0]="isVideoOff" class="w-full rounded-lg shadow-lg"></video>
   </div>
 
   <!-- Call controls -->
@@ -36,6 +36,25 @@
   <!-- Call info -->
   <div class="absolute top-4 left-4 text-white">
     <h3 class="text-xl font-semibold">Video Call</h3>
-    <p class="text-sm">00:05:23</p>
+    <p class="text-sm">{{ callDuration | date:'mm:ss' }}</p>
+  </div>
+
+  <!-- Incoming call UI -->
+  <div *ngIf="isRinging" class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-70">
+    <div class="text-center text-white">
+      <h3 class="text-2xl font-bold mb-2">Incoming Call</h3>
+      <div class="flex justify-center space-x-4 mt-6">
+        <button (click)="answerIncomingCall()" class="p-3 rounded-full bg-green-500 text-white hover:bg-green-600">
+          <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+          </svg>
+        </button>
+        <button (click)="rejectCall()" class="p-3 rounded-full bg-red-500 text-white hover:bg-red-600">
+          <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
   </div>
 </div>

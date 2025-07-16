@@ -10,6 +10,9 @@ import { MessageListComponent } from '../message-list/message-list.component';
 import { MessageInputComponent } from '../message-input/message-input.component';
 import { VideoCallComponent } from '../video-call/video-call.component';
 import { ConversationCreateComponent } from '../conversation-create/conversation-create.component';
+import { CallService } from '../../services/call.service';
+import { CallStatus, CallType } from '../../models/call.enum';
+import { CallRequest } from '../../models/call.request';
 
 @Component({
   selector: 'app-chat-container',
@@ -28,6 +31,7 @@ import { ConversationCreateComponent } from '../conversation-create/conversation
 export class ChatContainerComponent implements OnInit, OnDestroy {
   private chatService = inject(ChatService);
   private authService = inject(AuthService);
+  private callService = inject(CallService);
 
   private readonly destroy$ = new Subject<void>();
   private subscriptions = new Subscription();
@@ -35,6 +39,7 @@ export class ChatContainerComponent implements OnInit, OnDestroy {
   showVideoCall = false;
   activeConversationId: number | null = null;
   private currentUserId: number | null = null;
+  incomingCall: CallRequest | null = null;
 
   ngOnInit(): void {
     this.currentUserId = this.authService.getCurrentUser()?.userId ?? null;
@@ -44,12 +49,12 @@ export class ChatContainerComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Initial conversation fetch
     this.subscriptions.add(
-      this.chatService.getConversations().subscribe()
+      this.chatService.getConversations().pipe(
+        takeUntil(this.destroy$)
+      ).subscribe()
     );
 
-    // Track active conversation changes
     this.subscriptions.add(
       this.chatService.activeConversation$.pipe(
         filter(conv => conv !== null),
@@ -59,6 +64,35 @@ export class ChatContainerComponent implements OnInit, OnDestroy {
         this.loadMessages(conv!.conversationId);
       })
     );
+
+    this.subscriptions.add(
+      this.callService.getIncomingCall$().pipe(
+        takeUntil(this.destroy$)
+      ).subscribe(request => {
+        this.incomingCall = request;
+        this.showVideoCall = true;
+      })
+    );
+  }
+
+  startVideoCall(): void {
+    if (!this.activeConversationId || !this.currentUserId) return;
+
+    const callId = this.generateCallId();
+    const request: CallRequest = {
+      callId,
+      callerId: this.currentUserId,
+      conversationId: this.activeConversationId,
+      callType: CallType.PRIVATE,
+      status: CallStatus.RINGING
+    };
+
+    this.callService.initiateCall(request);
+    this.showVideoCall = true;
+  }
+
+  private generateCallId(): string {
+    return Math.random().toString(36).substring(2, 15);
   }
 
   private loadMessages(conversationId: number): void {
@@ -67,11 +101,6 @@ export class ChatContainerComponent implements OnInit, OnDestroy {
         takeUntil(this.destroy$)
       ).subscribe()
     );
-  }
-
-  startVideoCall(): void {
-    if (!this.activeConversationId) return;
-    this.showVideoCall = true;
   }
 
   endVideoCall(): void {
