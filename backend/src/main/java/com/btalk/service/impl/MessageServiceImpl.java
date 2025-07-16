@@ -7,6 +7,12 @@ import com.btalk.exceptions.ResourceNotFoundException;
 import com.btalk.repository.*;
 import com.btalk.service.MessageService;
 import com.btalk.service.UserService;
+
+import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
@@ -16,6 +22,7 @@ import java.util.stream.Collectors;
 
 @Service
 @Transactional
+@Slf4j
 public class MessageServiceImpl implements MessageService {
     
     private final MessageRepository messageRepository;
@@ -177,4 +184,32 @@ public class MessageServiceImpl implements MessageService {
         messageDto.setSentAt(messageDto.getSentAt());
         return messageDto;
     }
+
+    @Override
+    public Page<MessageDto> getConversationMessages(Long conversationId, Long userId, int page, int size) {
+        if (!participantRepository.existsByConversationIdAndUserId(conversationId, userId)) {
+            throw new RuntimeException("User is not a participant in this conversation");
+        }
+        
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Message> messages = messageRepository.findByConversationId(conversationId, pageable);
+        return messages.map(this::convertToDto);
+    }
+
+    @Override
+    public Page<MessageDto> getMessagesBefore(Long conversationId, Long userId, LocalDateTime before, int page, int size) {
+        if (!participantRepository.existsByConversationIdAndUserId(conversationId, userId)) {
+            throw new RuntimeException("User is not a participant in this conversation");
+        }
+        
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Message> messages = messageRepository.findMessagesBefore(conversationId, before, pageable);
+        
+        for(Message message : messages.getContent()) {
+        	log.info("Message is {}",message.toString());
+        }
+        log.info("Message size is : {}",messages.getSize());
+        return messages.map(this::convertToDto);
+    }
+
 }

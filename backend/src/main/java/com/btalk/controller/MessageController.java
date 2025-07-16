@@ -6,19 +6,30 @@ import com.btalk.service.MessageService;
 import com.btalk.utils.FileStorageUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.data.domain.Page;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/messages")
+@Slf4j
 public class MessageController {
     
     private final MessageService messageService;
@@ -118,4 +129,29 @@ public class MessageController {
         );
         return ApiResponse.success("Message marked as read successfully",null);
     }
+    
+    @GetMapping("/conversation/{conversationId}/page")
+    public ApiResponse<Page<MessageDto>> getConversationMessagesPaginated(
+            @PathVariable Long conversationId,
+            @RequestParam Long userId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        Page<MessageDto> messages = messageService.getConversationMessages(conversationId, userId, page, size);
+        return ApiResponse.success("Messages retrieved successfully", messages);
+    }
+
+    @GetMapping("/conversation/{conversationId}/page/before")
+    public ApiResponse<Page<MessageDto>> getMessagesBefore(
+            @PathVariable Long conversationId,
+            @RequestParam Long userId,
+            @RequestParam Instant  before,  // Accept as String
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        
+    	LocalDateTime localBefore = LocalDateTime.ofInstant(before, ZoneId.systemDefault());
+    	log.info("BOOOO : {}",localBefore.toString());
+        Page<MessageDto> messages = messageService.getMessagesBefore(conversationId, userId, localBefore, page, size);
+        return ApiResponse.success("Messages retrieved successfully", messages);
+    }
+    
 }

@@ -1,6 +1,9 @@
 package com.btalk.repository;
 
 import com.btalk.entity.Message;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -31,4 +34,14 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
                                          @Param("after") LocalDateTime after);
     
     Optional<Message> findTopByConversationIdOrderBySentAtDesc(Long conversationId);
+    
+    @Query("SELECT m FROM Message m WHERE m.conversationId = :conversationId ORDER BY m.sentAt DESC")
+    Page<Message> findByConversationId(@Param("conversationId") Long conversationId, Pageable pageable);
+
+    @Query("SELECT m FROM Message m WHERE m.conversationId = :conversationId AND m.sentAt <= :before ORDER BY m.sentAt DESC")
+   Page<Message> findMessagesBefore(
+            @Param("conversationId") Long conversationId,
+            @Param("before") LocalDateTime before,
+            Pageable pageable);
+    
 }
