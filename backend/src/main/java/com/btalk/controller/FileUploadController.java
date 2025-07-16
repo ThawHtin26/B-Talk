@@ -92,19 +92,51 @@ public class FileUploadController {
     }
     
     private String determineContentType(Path filePath, String filename) throws IOException {
-        // Try to probe content type first
+        // Try probing the content type
         String contentType = Files.probeContentType(filePath);
-        
-        // Fallback for common file types if probe fails
+
         if (contentType == null) {
-            contentType = switch (FilenameUtils.getExtension(filename).toLowerCase()) {
+            String ext = FilenameUtils.getExtension(filename).toLowerCase();
+            contentType = switch (ext) {
+                // Images
                 case "png" -> "image/png";
                 case "jpg", "jpeg" -> "image/jpeg";
+                case "gif" -> "image/gif";
+                case "bmp" -> "image/bmp";
+                case "webp" -> "image/webp";
+
+                // Audio
+                case "mp3" -> "audio/mpeg";
+                case "wav" -> "audio/wav";
+                case "ogg" -> "audio/ogg";
+                case "m4a" -> "audio/mp4";
+
+                // Video
+                case "mp4" -> "video/mp4";
+                case "mov" -> "video/quicktime";
+                case "avi" -> "video/x-msvideo";
+                case "webm" -> "video/webm";
+
+                // Documents
                 case "pdf" -> "application/pdf";
                 case "txt" -> "text/plain";
+                case "doc" -> "application/msword";
+                case "docx" -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+                case "xls" -> "application/vnd.ms-excel";
+                case "xlsx" -> "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+                case "ppt" -> "application/vnd.ms-powerpoint";
+                case "pptx" -> "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+
+                // Archives
+                case "zip" -> "application/zip";
+                case "rar" -> "application/vnd.rar";
+                case "7z" -> "application/x-7z-compressed";
+
                 default -> "application/octet-stream";
             };
         }
+
         return contentType;
     }
+
 }

@@ -25,6 +25,7 @@ import { LineBreakPipe } from '../../pipes/line-break.pipe';
 import { DatePipe } from '@angular/common';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
+import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-message-list',
@@ -105,7 +106,7 @@ export class MessageListComponent implements OnInit, OnDestroy, AfterViewChecked
         .subscribe({
           next: (response) => {
             if (response.success && response.data) {
-              this.messages = response.data.content;
+              this.messages = response.data.content.reverse();
               this.hasMoreMessages = !response.data.last;
               this.shouldScrollToBottom = true;
             }
@@ -144,7 +145,7 @@ export class MessageListComponent implements OnInit, OnDestroy, AfterViewChecked
             this.chatService.getMessages(conv.conversationId).pipe(
               tap((response) => {
                 if (response.success && response.data) {
-                  this.messages = response.data.content;
+                  this.messages = response.data.content.reverse();
                   this.hasMoreMessages = !response.data.last;
                   this.shouldScrollToBottom = true;
                 }
@@ -218,7 +219,7 @@ onScroll(): void {
     next: (response) => {
       if (response.success && response.data) {
         // Store the new messages
-        const newMessages = response.data.content;
+        const newMessages = response.data.content.reverse();
         console.log("NEw MEssage",newMessages)
         // Prepend new messages
         this.messages = [...newMessages, ...this.messages];
@@ -300,37 +301,38 @@ onScroll(): void {
   }
 
   getSafeFileUrl(fileUrl: string): SafeUrl {
-    return this.sanitizer.bypassSecurityTrustUrl(fileUrl);
+    return this.sanitizer.bypassSecurityTrustUrl(`${environment.apiUrl}${fileUrl}`);
   }
 
   toggleAudioPlayback(attachment: Attachment): void {
-    if (!this.audioElements[attachment.attachmentId]) {
-      this.audioElements[attachment.attachmentId] = new Audio(attachment.fileUrl);
-      this.audioElements[attachment.attachmentId].addEventListener('ended', () => this.onAudioEnded(attachment));
-    }
-
-    const audio = this.audioElements[attachment.attachmentId];
-
-    if (this.currentlyPlayingAudio === attachment.attachmentId) {
-      audio.pause();
-      this.currentlyPlayingAudio = null;
-    } else {
-      if (this.currentlyPlayingAudio !== null) {
-        this.audioElements[this.currentlyPlayingAudio].pause();
-      }
-
-      audio.currentTime = 0;
-      audio.play()
-        .then(() => {
-          this.currentlyPlayingAudio = attachment.attachmentId;
-          this.cd.markForCheck();
-        })
-        .catch(err => {
-          console.error('Error playing audio:', err);
-          this.currentlyPlayingAudio = null;
-        });
-    }
+  if (!this.audioElements[attachment.attachmentId]) {
+    this.audioElements[attachment.attachmentId] = new Audio(`${environment.wsUrl}${attachment.fileUrl}`);
+    this.audioElements[attachment.attachmentId].addEventListener('ended', () => this.onAudioEnded(attachment));
   }
+
+  const audio = this.audioElements[attachment.attachmentId];
+
+  if (this.currentlyPlayingAudio === attachment.attachmentId) {
+    audio.pause();
+    this.currentlyPlayingAudio = null;
+  } else {
+    if (this.currentlyPlayingAudio !== null) {
+      this.audioElements[this.currentlyPlayingAudio].pause();
+    }
+
+    audio.currentTime = 0;
+    audio.play()
+      .then(() => {
+        this.currentlyPlayingAudio = attachment.attachmentId;
+        this.cd.markForCheck();
+      })
+      .catch(err => {
+        console.error('Error playing audio:', err);
+        this.currentlyPlayingAudio = null;
+      });
+  }
+}
+
 
   isAudioPlaying(attachment: Attachment): boolean {
     return this.currentlyPlayingAudio === attachment.attachmentId;
@@ -368,6 +370,13 @@ onScroll(): void {
     currentDate.getMonth() !== previousDate.getMonth() ||
     currentDate.getFullYear() !== previousDate.getFullYear()
   );
+}
+
+getFullFileUrl(fileUrl: string): string {
+  if (!fileUrl.startsWith('http')) {
+    return `${environment.apiUrl}${fileUrl}`;
+  }
+  return fileUrl;
 }
 
 

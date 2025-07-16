@@ -1,7 +1,7 @@
 <div class="mt-2">
   <div *ngIf="getIcon() === 'image'" class="relative">
     <img
-      [src]="attachment.thumbnailUrl || attachment.fileUrl"
+      [src]=" attachment.fileUrl"
       class="max-w-xs rounded-lg cursor-pointer"
       (click)="openFullscreen()"
     />
