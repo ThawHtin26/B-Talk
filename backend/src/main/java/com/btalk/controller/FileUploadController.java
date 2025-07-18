@@ -1,6 +1,7 @@
 package com.btalk.controller;
 
 import org.apache.commons.io.FilenameUtils;
+
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -43,40 +44,46 @@ public class FileUploadController {
     @GetMapping("/{filename:.+}")
     public ResponseEntity<Resource> getFile(@PathVariable String filename) {
         try {
-            // 1. Get the base upload directory
-            Path uploadDir = Paths.get(fileStorageUtils.getUploadDir()).normalize().toAbsolutePath();
-            
-            // 2. Resolve the filename against the upload directory
+            // 1. Get and normalize the base upload directory
+            Path uploadDir = Paths.get(fileStorageUtils.getUploadDir()).toAbsolutePath().normalize();
+
+            // 2. Resolve and normalize the full file path
             Path filePath = uploadDir.resolve(filename).normalize();
-            
-            // 3. SECURITY CHECK: Verify the resolved path stays within the upload directory
+
+            // 3. SECURITY CHECK: Prevent path traversal
             if (!filePath.startsWith(uploadDir)) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                       .body(new ByteArrayResource("Access denied".getBytes()));
+                return ResponseEntity.status(HttpStatus.FORBIDDEN.value())
+                        .body(new ByteArrayResource("Access denied".getBytes()));
             }
 
-            // 4. Check if file exists
+            // 4. Create resource and check if it exists and is readable
             Resource resource = new UrlResource(filePath.toUri());
-            if (!resource.exists()) {
-                return ResponseEntity.notFound().build();
+            if (!resource.exists() || !resource.isReadable()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND.value())
+                        .body(new ByteArrayResource("File not found".getBytes()));
             }
 
             // 5. Determine content type
             String contentType = determineContentType(filePath, filename);
-            
-            // 6. Return the file
+            if (contentType == null) {
+                contentType = "application/octet-stream"; // Fallback
+            }
+
+            // 6. Return file as ResponseEntity
             return ResponseEntity.ok()
-                   .contentType(MediaType.parseMediaType(contentType))
-                   .header(HttpHeaders.CONTENT_DISPOSITION, 
-                          "inline; filename=\"" + resource.getFilename() + "\"")
-                   .body(resource);
-            
+                    .contentType(MediaType.parseMediaType(contentType))
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + resource.getFilename() + "\"")
+                    .body(resource);
+
         } catch (InvalidPathException e) {
             return ResponseEntity.badRequest()
-                   .body(new ByteArrayResource("Invalid file path".getBytes()));
+                    .body(new ByteArrayResource("Invalid file path".getBytes()));
+        } catch (MalformedURLException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST.value())
+                    .body(new ByteArrayResource("Malformed file URL".getBytes()));
         } catch (Exception e) {
             return ResponseEntity.internalServerError()
-                   .body(new ByteArrayResource("Failed to retrieve file".getBytes()));
+                    .body(new ByteArrayResource("Failed to retrieve file".getBytes()));
         }
     }
 

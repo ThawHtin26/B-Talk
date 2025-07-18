@@ -7,7 +7,7 @@ import lombok.Data;
 @Data
 public class WebRtcSignal {
     private String callId;
-    private Long senderId;
+    private Long callerId;
     private Long recipientId;
     private Long conversationId;
     private SignalType signalType;
