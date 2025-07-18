@@ -1,11 +1,11 @@
 import { SignalType } from "./call.enum";
 
 export interface CallSignal {
-  conversationId: number;
-  callId?: string;
-  senderId: number;
-  recipientId?: number;
-  participants?: number[];
+  conversationId?: number;
+  callerId: number;
+  recipientId?: number; // For private calls
+  participants?: number[]; // For group calls
   type: SignalType;
-  payload: any;
+  payload: any; // SDP offer/answer or ICE candidate
+  callId?: string; // Add if needed for call tracking
 }

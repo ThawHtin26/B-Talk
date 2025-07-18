@@ -301,7 +301,7 @@ onScroll(): void {
   }
 
   getSafeFileUrl(fileUrl: string): SafeUrl {
-    return this.sanitizer.bypassSecurityTrustUrl(`${environment.apiUrl}${fileUrl}`);
+    return this.sanitizer.bypassSecurityTrustUrl(`${environment.baseUrl}${fileUrl}`);
   }
 
   toggleAudioPlayback(attachment: Attachment): void {
@@ -374,7 +374,7 @@ onScroll(): void {
 
 getFullFileUrl(fileUrl: string): string {
   if (!fileUrl.startsWith('http')) {
-    return `${environment.apiUrl}${fileUrl}`;
+    return `${environment.baseUrl}${fileUrl}`;
   }
   return fileUrl;
 }

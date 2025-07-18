@@ -2,7 +2,7 @@ import { CallStatus, CallType } from "./call.enum";
 
 export interface CallRequest {
   callId: string;
-  callerId: number;
+  callerId: number | null;
   recipientId?: number;
   conversationId: number;
   status: CallStatus;

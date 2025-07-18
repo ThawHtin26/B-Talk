@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Subscription, Subject } from 'rxjs';
-import { filter, takeUntil } from 'rxjs/operators';
+import { filter, take, takeUntil } from 'rxjs/operators';
 
 import { ChatService } from '../../services/chat.service';
 import { AuthService } from '../../services/auth.service';
@@ -37,7 +37,7 @@ export class ChatContainerComponent implements OnInit, OnDestroy {
   private subscriptions = new Subscription();
 
   showVideoCall = false;
-  activeConversationId: number | null = null;
+  activeConversationId!: number;
   private currentUserId: number | null = null;
   incomingCall: CallRequest | null = null;
 
@@ -60,8 +60,12 @@ export class ChatContainerComponent implements OnInit, OnDestroy {
         filter(conv => conv !== null),
         takeUntil(this.destroy$)
       ).subscribe(conv => {
-        this.activeConversationId = conv!.conversationId;
-        this.loadMessages(conv!.conversationId);
+        if (conv) {
+          this.activeConversationId = conv.conversationId;
+          this.loadMessages(conv.conversationId);
+          // Reset video call state when conversation changes
+          this.showVideoCall = false;
+        }
       })
     );
 
@@ -69,27 +73,56 @@ export class ChatContainerComponent implements OnInit, OnDestroy {
       this.callService.getIncomingCall$().pipe(
         takeUntil(this.destroy$)
       ).subscribe(request => {
-        this.incomingCall = request;
-        this.showVideoCall = true;
+        if (request) {
+          this.incomingCall = request;
+          this.showVideoCall = true;
+        }
       })
     );
   }
+    startVideoCall(): void {
+    if (!this.activeConversationId || !this.currentUserId) {
+      console.error('Missing required data for video call');
+      return;
+    }
 
-  startVideoCall(): void {
-    if (!this.activeConversationId || !this.currentUserId) return;
+    this.chatService.activeConversation$
+      .pipe(take(1))
+      .subscribe({
+        next: (conversation) => {
+          if (!conversation) {
+            console.error('No active conversation');
+            return;
+          }
 
-    const callId = this.generateCallId();
-    const request: CallRequest = {
-      callId,
-      callerId: this.currentUserId,
-      conversationId: this.activeConversationId,
-      callType: CallType.PRIVATE,
-      status: CallStatus.RINGING
-    };
+          const recipient = conversation.participants.find(
+            (p: any) => p.userId !== this.currentUserId
+          );
 
-    this.callService.initiateCall(request);
-    this.showVideoCall = true;
+          if (!recipient) {
+            console.error('Recipient not found');
+            return;
+          }
+
+          const callId = this.generateCallId();
+          const request: CallRequest = {
+            callId,
+            callerId: this.currentUserId,
+            recipientId: recipient.userId,
+            conversationId: this.activeConversationId,
+            callType: CallType.PRIVATE,
+            status: CallStatus.RINGING
+          };
+
+          this.callService.initiateCall(request);
+          this.showVideoCall = true;
+        },
+        error: (err) => {
+          console.error('Error starting video call:', err);
+        }
+      });
   }
+
 
   private generateCallId(): string {
     return Math.random().toString(36).substring(2, 15);

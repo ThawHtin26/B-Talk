@@ -1,12 +1,14 @@
+// call.service.ts (Angular)
 import { Injectable, OnDestroy } from '@angular/core';
 import { BehaviorSubject, Observable, Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-
+import { HttpClient } from '@angular/common/http';
 import { WebSocketService } from './web-socket.service';
 import { AuthService } from './auth.service';
 import { CallRequest } from '../models/call.request';
 import { CallSignal } from './../models/call.signal';
-import { SignalType } from './../models/call.enum';
+import { CallStatus, SignalType } from './../models/call.enum';
+import { environment } from '../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class CallService implements OnDestroy {
@@ -19,6 +21,7 @@ export class CallService implements OnDestroy {
   private callSignal$ = new Subject<CallSignal>();
 
   constructor(
+    private http: HttpClient,
     private wsService: WebSocketService,
     private authService: AuthService
   ) {
@@ -27,10 +30,7 @@ export class CallService implements OnDestroy {
     this.listenForCallRejected();
     this.listenForCallEnded();
     this.listenForCallSignals();
-
-
   }
-
 
   private listenForIncomingCalls(): void {
     this.wsService
@@ -71,13 +71,8 @@ export class CallService implements OnDestroy {
     this.wsService
       .subscribe<CallSignal>(`/topic/call/${conversationId}/signals`)
       .pipe(takeUntil(this.destroy$))
-      .subscribe(signal => {
-        console.log('[Signal] Received from group:', signal);
-        this.callSignal$.next(signal);
-      });
+      .subscribe(signal => this.callSignal$.next(signal));
   }
-
-  // --- Exposed Observable APIs ---
 
   getIncomingCall$(): Observable<CallRequest> {
     return this.incomingCall$.asObservable();
@@ -99,43 +94,36 @@ export class CallService implements OnDestroy {
     return this.callSignal$.asObservable();
   }
 
-  // --- WebSocket outbound events ---
+  sendSignal(signal: CallSignal): void {
+    if (!signal.conversationId && !signal.recipientId) {
+      console.error('Signal must have either conversationId or recipientId');
+      return;
+    }
+    const route = signal.recipientId
+      ? '/app/call/private/signal'
+      : '/app/call/group/signal';
+    this.wsService.sendMessage(route, signal);
+  }
 
   initiateCall(request: CallRequest): void {
-    this.wsService.sendMessage('/app/call/start', request);
+    const callRequest = {
+      ...request,
+      status: CallStatus.RINGING
+    };
+    console.log("Bahubali",callRequest);
+    this.http.post(`${environment.apiUrl}/calls/start`, callRequest).subscribe();
   }
 
   answerCall(request: CallRequest): void {
-    this.wsService.sendMessage('/app/call/answer', request);
+    this.http.post(`${environment.apiUrl}/calls/answer`, request).subscribe();
   }
 
   rejectCall(request: CallRequest): void {
-    this.wsService.sendMessage('/app/call/reject', request);
+    this.http.post(`${environment.apiUrl}/calls/reject`, request).subscribe();
   }
 
   endCall(request: CallRequest): void {
-    this.wsService.sendMessage('/app/call/end', request);
-  }
-
-  sendSignal(signal: CallSignal): void {
-    let route: string;
-    console.log('Send signal', signal);
-
-    switch (signal.type) {
-      case SignalType.OFFER:
-      case SignalType.ANSWER:
-      case SignalType.CANDIDATE:
-        route = signal.recipientId
-          ? '/app/call/private/signal'
-          : '/app/call/group/signal';
-        break;
-
-      default:
-        console.warn('Unhandled signal type:', signal.type);
-        return;
-    }
-
-    this.wsService.sendMessage(route, signal);
+    this.http.post(`${environment.apiUrl}/calls/end`, request).subscribe();
   }
 
   ngOnDestroy(): void {
