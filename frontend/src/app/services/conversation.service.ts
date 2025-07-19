@@ -31,15 +31,15 @@ export class ConversationService {
       );
   }
 
-  createPrivateConversation(participantId: number): Observable<ApiResponse<Conversation>> {
+  createPrivateConversation(participantId: string): Observable<ApiResponse<Conversation>> {
     const userId = this.authService.getCurrentUser()?.userId;
     if (!userId) return throwError(() => this.createAuthError());
 
     return this.http
       .post<ApiResponse<Conversation>>(`${this.apiUrl}/conversations/private`, null, {
         params: {
-          creatorId: userId.toString(),
-          participantId: participantId.toString(),
+          creatorId: userId,
+          participantId: participantId,
         },
       })
       .pipe(
@@ -52,7 +52,7 @@ export class ConversationService {
       );
   }
 
-  createGroupConversation(name: string, participantIds: number[]): Observable<ApiResponse<Conversation>> {
+  createGroupConversation(name: string, participantIds: string[]): Observable<ApiResponse<Conversation>> {
     const userId = this.authService.getCurrentUser()?.userId;
     if (!userId) return throwError(() => this.createAuthError());
 
@@ -63,7 +63,7 @@ export class ConversationService {
     return this.http
       .post<ApiResponse<Conversation>>(`${this.apiUrl}/conversations/group`, participantIds, {
         params: {
-          creatorId: userId.toString(),
+          creatorId: userId,
           name: name,
         },
       })

@@ -9,6 +9,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import com.btalk.constants.MessageType;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "messages")
@@ -17,14 +18,14 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class Message {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long messageId;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID messageId;
 
     @Column(name = "conversation_id", nullable = false)
-    private Long conversationId;
+    private UUID conversationId;
 
     @Column(name = "sender_id", nullable = false)
-    private Long senderId;
+    private UUID senderId;
 
     private String content;
 

@@ -1,0 +1,55 @@
+<div class="notification-permission" *ngIf="isSupported">
+  
+  <!-- Permission Request -->
+  <div *ngIf="showPermissionRequest" class="permission-request">
+    <div class="permission-icon">
+      <i class="fas fa-bell"></i>
+    </div>
+    <div class="permission-content">
+      <h3>Enable Notifications</h3>
+      <p>Get notified about new messages and calls</p>
+      <button (click)="requestPermission()" class="permission-btn primary">
+        <i class="fas fa-bell"></i>
+        Enable Notifications
+      </button>
+    </div>
+  </div>
+
+  <!-- Permission Denied -->
+  <div *ngIf="showPermissionDenied" class="permission-denied">
+    <div class="permission-icon">
+      <i class="fas fa-bell-slash"></i>
+    </div>
+    <div class="permission-content">
+      <h3>Notifications Blocked</h3>
+      <p>Please enable notifications in your browser settings to receive updates</p>
+      <button (click)="requestPermission()" class="permission-btn secondary">
+        <i class="fas fa-cog"></i>
+        Try Again
+      </button>
+    </div>
+  </div>
+
+  <!-- Permission Granted -->
+  <div *ngIf="showPermissionGranted" class="permission-granted">
+    <div class="permission-icon">
+      <i class="fas fa-check-circle"></i>
+    </div>
+    <div class="permission-content">
+      <h3>Notifications Enabled</h3>
+      <p>You'll receive notifications for new messages and calls</p>
+    </div>
+  </div>
+
+</div>
+
+<!-- Not Supported -->
+<div *ngIf="!isSupported" class="notification-not-supported">
+  <div class="permission-icon">
+    <i class="fas fa-exclamation-triangle"></i>
+  </div>
+  <div class="permission-content">
+    <h3>Notifications Not Supported</h3>
+    <p>Your browser doesn't support notifications</p>
+  </div>
+</div> 

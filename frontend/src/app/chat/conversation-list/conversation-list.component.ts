@@ -37,12 +37,16 @@ export class ConversationListComponent implements OnInit, OnDestroy {
 
   filteredConversations$: Observable<Conversation[]> = this.conversations$.pipe(
     map((conversations) => {
-      if (!this.searchTerm.trim()) return conversations;
+      // Filter out null/undefined conversations first
+      const validConversations = conversations.filter(conv => conv != null);
+      
+      if (!this.searchTerm.trim()) return validConversations;
       const term = this.searchTerm.toLowerCase();
-      return conversations.filter(
+      return validConversations.filter(
         (conv) =>
           conv.name?.toLowerCase().includes(term) ||
-          conv.participants.some((p) => p.userName.toLowerCase().includes(term))
+          (conv.participants && Array.isArray(conv.participants) && 
+           conv.participants.some((p) => p?.userName?.toLowerCase().includes(term)))
       );
     })
   );
@@ -51,16 +55,20 @@ export class ConversationListComponent implements OnInit, OnDestroy {
     this.loadConversations();
 
     this.subscriptions.add(
-      this.conversations$.subscribe((conversations) => {
-        console.log('🔥 Updated conversations in UI:', conversations);
-      })
-    );
-
-    this.subscriptions.add(
       this.chatService.messageUpdates$.subscribe((message) => {
         if (message) {
           // This will trigger the conversation list to update
           this.chatSateService.updateLastMessageInLocalState(message);
+        }
+      })
+    );
+
+    // Subscribe to conversation updates for real-time updates
+    this.subscriptions.add(
+      this.chatService.conversationUpdates$.subscribe((conversation) => {
+        if (conversation) {
+          // The conversation list will automatically update through the observable
+          console.log('New conversation received:', conversation);
         }
       })
     );
@@ -87,33 +95,70 @@ export class ConversationListComponent implements OnInit, OnDestroy {
   }
 
   selectConversation(conversation: Conversation): void {
+    if (!conversation) {
+      return;
+    }
     this.chatService.setActiveConversation(conversation);
   }
 
   getConversationAvatar(conv: Conversation): string {
+    if (!conv) {
+      return 'assets/default-avatar.png';
+    }
+    
     if (conv.type === 'GROUP') {
       return 'assets/default-avatar.png';
     }
+    
+    const currentUserId = this.authService.getCurrentUser()?.userId;
+    if (!conv.participants || !Array.isArray(conv.participants)) {
+      return 'assets/default-avatar.png';
+    }
+    
     const otherParticipant = conv.participants.find(
-      (p) => p?.userId !== this.authService.getCurrentUser()?.userId
+      (p) => p.userId !== currentUserId
     );
     return 'assets/default-avatar.png';
   }
 
   getConversationName(conv: Conversation): string {
-    if (conv.name) return conv.name;
+    if (!conv) {
+      return 'Unknown user';
+    }
+    
+    // For group conversations, use the conversation name
+    if (conv.type === 'GROUP' && conv.name) {
+      return conv.name;
+    }
+    
+    // For private conversations, show the other participant's name
+    const currentUserId = this.authService.getCurrentUser()?.userId;
+    if (!conv.participants || !Array.isArray(conv.participants)) {
+      return 'Unknown user';
+    }
+    
     const otherParticipant = conv.participants.find(
-      (p) => p?.userId !== this.authService.getCurrentUser()?.userId
+      (p) => p?.userId !== currentUserId
     );
-    return otherParticipant?.userName || 'Unknown user';
+    
+    if (otherParticipant) {
+      return otherParticipant.userName || 'Unknown user';
+    }
+    
+    return 'Unknown user';
   }
 
   hasUnreadMessages(conv: Conversation): boolean {
+    if (!conv) return false;
     return conv.unreadCount > 0;
   }
 
   getUnreadCount(conv: Conversation): string {
-    if (!conv.unreadCount || conv.unreadCount <= 0) return '';
+    if (!conv || !conv.unreadCount || conv.unreadCount <= 0) return '';
     return conv.unreadCount > 9 ? '9+' : conv.unreadCount.toString();
+  }
+
+  getCurrentUserId(): string {
+    return this.authService.getCurrentUser()?.userId || '';
   }
 }

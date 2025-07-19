@@ -9,9 +9,9 @@ export enum MessageType {
 }
 
 export interface Message {
-  messageId?: number | null;  // Optional because it's assigned by server
-  conversationId: number;
-  senderId: number;
+  messageId?: string | null;  // UUID as string, optional because it's assigned by server
+  conversationId: string; // UUID as string
+  senderId: string; // UUID as string
   senderName?: string | null;  // Optional, might be added by server
   content: string;
   messageType: MessageType;

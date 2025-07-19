@@ -8,7 +8,7 @@ export class ChatStateService {
   // State subjects
   private _conversations = new BehaviorSubject<Conversation[]>([]);
   private _activeConversation = new BehaviorSubject<Conversation | null>(null);
-  private _messages = new BehaviorSubject<{ [key: number]: Message[] }>({});
+  private _messages = new BehaviorSubject<{ [key: string]: Message[] }>({});
   private _messageUpdates = new Subject<Message>();
   private _conversationUpdates = new Subject<Conversation>();
 
@@ -44,7 +44,7 @@ export class ChatStateService {
     }
   }
 
-  prependMessages(conversationId: number, newMessages: Message[]): void {
+  prependMessages(conversationId: string, newMessages: Message[]): void {
     const currentState = this._messages.getValue();
     const currentMessages = currentState[conversationId] || [];
 
@@ -57,8 +57,7 @@ export class ChatStateService {
     });
   }
 
-
-  updateMessagesState(conversationId: number, messages: Message[]): void {
+  updateMessagesState(conversationId: string, messages: Message[]): void {
     this._messages.next({
       ...this._messages.value,
       [conversationId]: messages,
@@ -70,8 +69,26 @@ export class ChatStateService {
     this.addMessageToLocalState(message);
   }
 
-  notifyNewConversation(newConv: Conversation): void {
-    this.updateConversationInLocalState(newConv);
+  notifyNewConversation(conversation: Conversation): void {
+    const currentConversations = this._conversations.value;
+    
+    // Check if conversation already exists
+    const existingIndex = currentConversations.findIndex(
+      c => c.conversationId === conversation.conversationId
+    );
+    
+    if (existingIndex >= 0) {
+      // Update existing conversation
+      const updated = [...currentConversations];
+      updated[existingIndex] = { ...updated[existingIndex], ...conversation };
+      this._conversations.next(updated);
+    } else {
+      // Add new conversation at the beginning
+      this._conversations.next([conversation, ...currentConversations]);
+    }
+    
+    // Emit conversation update
+    this._conversationUpdates.next(conversation);
   }
 
   private addMessageToLocalState(message: Message): void {
@@ -96,34 +113,34 @@ export class ChatStateService {
   }
 
   // In chat-state.service.ts
-updateConversations(conversations: Conversation[]): void {
-  // Merge new conversations with existing ones, preserving any local state
-  const currentConversations = this._conversations.value;
+  updateConversations(conversations: Conversation[]): void {
+    // Merge new conversations with existing ones, preserving any local state
+    const currentConversations = this._conversations.value;
 
-  // Create a map of existing conversations for quick lookup
-  const existingConversationsMap = new Map<number, Conversation>();
-  currentConversations.forEach(conv => {
-    existingConversationsMap.set(conv.conversationId, conv);
-  });
+    // Create a map of existing conversations for quick lookup
+    const existingConversationsMap = new Map<string, Conversation>();
+    currentConversations.forEach(conv => {
+      existingConversationsMap.set(conv.conversationId, conv);
+    });
 
-  // Merge with new conversations, preserving existing conversation objects when possible
-  // to maintain reference equality for Angular change detection
-  const mergedConversations = conversations.map(newConv => {
-    const existingConv = existingConversationsMap.get(newConv.conversationId);
-    return existingConv ? {...existingConv, ...newConv} : newConv;
-  });
+    // Merge with new conversations, preserving existing conversation objects when possible
+    // to maintain reference equality for Angular change detection
+    const mergedConversations = conversations.map(newConv => {
+      const existingConv = existingConversationsMap.get(newConv.conversationId);
+      return existingConv ? {...existingConv, ...newConv} : newConv;
+    });
 
-  this._conversations.next(mergedConversations);
+    this._conversations.next(mergedConversations);
 
-  // Update the active conversation if it exists in the new data
-  const currentActive = this._activeConversation.value;
-  if (currentActive) {
-    const updatedActive = mergedConversations.find(
-      c => c.conversationId === currentActive.conversationId
-    );
-    if (updatedActive) {
-      this._activeConversation.next(updatedActive);
+    // Update the active conversation if it exists in the new data
+    const currentActive = this._activeConversation.value;
+    if (currentActive) {
+      const updatedActive = mergedConversations.find(
+        c => c.conversationId === currentActive.conversationId
+      );
+      if (updatedActive) {
+        this._activeConversation.next(updatedActive);
+      }
     }
   }
-}
 }

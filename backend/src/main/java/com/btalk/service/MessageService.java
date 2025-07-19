@@ -1,19 +1,21 @@
 package com.btalk.service;
 
 import com.btalk.dto.MessageDto;
+import com.btalk.dto.request.MessageRequest;
 import java.time.LocalDateTime;
 import java.util.List;
-
+import java.util.UUID;
 import org.springframework.data.domain.Page;
 
 public interface MessageService {
-    MessageDto sendMessage(MessageDto messageDto);
-    MessageDto getMessage(Long messageId);
-    List<MessageDto> getConversationMessages(Long conversationId, Long userId);
-    List<MessageDto> getUnreadMessages(Long conversationId, Long userId);
-    List<MessageDto> getNewMessages(Long conversationId, Long userId, LocalDateTime after);
-    void markMessagesAsRead(Long conversationId, Long userId);
-    void markMessageAsRead(Long messageId, Long userId);
-    Page<MessageDto> getConversationMessages(Long conversationId, Long userId, int page, int size);
-    Page<MessageDto> getMessagesBefore(Long conversationId, Long userId, LocalDateTime before, int page, int size);
+    MessageDto sendMessage(UUID conversationId, UUID senderId, MessageRequest request);
+    MessageDto getMessage(UUID messageId);
+    List<MessageDto> getConversationMessages(UUID conversationId, UUID userId);
+    List<MessageDto> getUnreadMessages(UUID conversationId, UUID userId);
+    List<MessageDto> getNewMessages(UUID conversationId, UUID userId, LocalDateTime after);
+    void markMessagesAsRead(UUID conversationId, UUID userId);
+    void markMessageAsRead(UUID messageId, UUID userId);
+    Page<MessageDto> getConversationMessages(UUID conversationId, UUID userId, int page, int size);
+    Page<MessageDto> getMessagesBefore(UUID conversationId, UUID userId, LocalDateTime before, int page, int size);
+    void deleteMessage(UUID messageId, UUID userId);
 }

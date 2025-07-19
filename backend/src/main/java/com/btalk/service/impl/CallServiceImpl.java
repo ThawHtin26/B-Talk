@@ -16,6 +16,7 @@ import com.btalk.repository.ConversationRepository;
 import com.btalk.repository.ParticipantRepository;
 import com.btalk.repository.UserRepository;
 import com.btalk.service.CallService;
+import com.btalk.dto.CallSignal;
 
 @Service
 public class CallServiceImpl implements CallService {
@@ -60,25 +61,23 @@ public class CallServiceImpl implements CallService {
 
     @Override
     public void notifyPrivateCall(CallRequest request) {
-        messagingTemplate.convertAndSendToUser(
-                request.getRecipientId().toString(),
-                "/queue/call/incoming",
+        messagingTemplate.convertAndSend(
+                "/user/" + request.getRecipientId().toString() + "/queue/call/incoming",
                 request
         );
     }
 
     @Override
     public void notifyGroupCall(CallRequest request) {
-        List<Long> participantIds = participantRepository
+        List<UUID> participantIds = participantRepository
                 .findUserIdsByConversationId(request.getConversationId())
                 .stream()
                 .filter(userId -> !userId.equals(request.getCallerId()))
                 .toList();
 
         participantIds.forEach(participantId -> {
-            messagingTemplate.convertAndSendToUser(
-                    participantId.toString(),
-                    "/queue/call/incoming",
+            messagingTemplate.convertAndSend(
+                    "/user/" + participantId.toString() + "/queue/call/incoming",
                     request
             );
         });
@@ -90,9 +89,8 @@ public class CallServiceImpl implements CallService {
             call.setStatus(CallStatus.ONGOING);
             callRepository.save(call);
 
-            messagingTemplate.convertAndSendToUser(
-                    request.getCallerId().toString(),
-                    "/queue/call/answered",
+            messagingTemplate.convertAndSend(
+                    "/user/" + request.getCallerId().toString() + "/queue/call/answered",
                     request
             );
         });
@@ -102,12 +100,10 @@ public class CallServiceImpl implements CallService {
     public void rejectCall(CallRequest request) {
         callRepository.findById(request.getCallId()).ifPresent(call -> {
             call.setStatus(CallStatus.REJECTED);
-            call.setEndTime(LocalDateTime.now());
             callRepository.save(call);
 
-            messagingTemplate.convertAndSendToUser(
-                    request.getCallerId().toString(),
-                    "/queue/call/rejected",
+            messagingTemplate.convertAndSend(
+                    "/user/" + request.getCallerId().toString() + "/queue/call/rejected",
                     request
             );
         });
@@ -116,31 +112,14 @@ public class CallServiceImpl implements CallService {
     @Override
     public void endCall(CallRequest request) {
         callRepository.findById(request.getCallId()).ifPresent(call -> {
-            call.setStatus(request.getStatus());
+            call.setStatus(CallStatus.ENDED);
             call.setEndTime(LocalDateTime.now());
             callRepository.save(call);
 
-            if (CallType.PRIVATE.name().equals(call.getCallType())) {
-                messagingTemplate.convertAndSendToUser(
-                        request.getRecipientId().toString(),
-                        "/queue/call/ended",
-                        request
-                );
-            } else {
-                List<Long> participantIds = participantRepository
-                        .findUserIdsByConversationId(request.getConversationId())
-                        .stream()
-                        .filter(userId -> !userId.equals(request.getCallerId()))
-                        .toList();
-
-                participantIds.forEach(participantId -> {
-                    messagingTemplate.convertAndSendToUser(
-                            participantId.toString(),
-                            "/queue/call/ended",
-                            request
-                    );
-                });
-            }
+            messagingTemplate.convertAndSend(
+                    "/user/" + request.getCallerId().toString() + "/queue/call/ended",
+                    request
+            );
         });
     }
 }

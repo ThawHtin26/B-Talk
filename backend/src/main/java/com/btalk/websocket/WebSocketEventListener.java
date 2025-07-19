@@ -1,12 +1,14 @@
 package com.btalk.websocket;
 
 import com.btalk.constants.UserStatus;
+
 import com.btalk.dto.ConversationDto;
 import com.btalk.service.ConversationService;
 import com.btalk.service.UserService;
 
 import java.security.Principal;
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.context.event.EventListener;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
@@ -35,7 +37,7 @@ public class WebSocketEventListener {
 
         if (user != null) {
             try {
-                Long userId = Long.parseLong(user.getName());
+                UUID userId = UUID.fromString(user.getName());
                 log.info("User connected: {}", userId);
                 userService.updateUserStatus(userId, UserStatus.ONLINE);
             } catch (Exception e) {
@@ -59,7 +61,7 @@ public class WebSocketEventListener {
         }
 
         try {
-            Long userId = Long.parseLong(user.getName());
+            UUID userId = UUID.fromString(user.getName());
             log.info("User disconnected: {}", userId);
             
             // Update user status
@@ -73,7 +75,7 @@ public class WebSocketEventListener {
                         try {
                             messagingTemplate.convertAndSend(
                                 "/topic/conversation/" + conversation.getConversationId() + "/user-offline",
-                                userId
+                                userId.toString()
                             );
                         } catch (Exception e) {
                             log.error("Failed to send offline notification for conversation {}: {}", 
@@ -84,7 +86,7 @@ public class WebSocketEventListener {
             } catch (Exception e) {
                 log.error("Failed to get user conversations for offline notifications: {}", e.getMessage());
             }
-        } catch (NumberFormatException e) {
+        } catch (IllegalArgumentException e) {
             log.error("Invalid user ID format: {}", user.getName());
         } catch (Exception e) {
             log.error("Error handling disconnect event: {}", e.getMessage());

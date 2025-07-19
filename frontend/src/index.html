@@ -2,12 +2,133 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Frontend</title>
+  <title>B-Talk</title>
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <!-- Polyfills for Node.js globals - MUST LOAD FIRST -->
+  <script>
+    // Global object polyfill - fixes "global is not defined" error
+    window.global = window;
+    
+    // Buffer polyfill
+    if (typeof window.Buffer === 'undefined') {
+      window.Buffer = { 
+        isBuffer: function() { return false; },
+        alloc: function(size) { return new Uint8Array(size); },
+        from: function(data) { return new Uint8Array(data); }
+      };
+    }
+    
+    // Process polyfill
+    if (typeof window.process === 'undefined') {
+      window.process = {
+        env: {},
+        version: '',
+        versions: {},
+        platform: 'browser',
+        nextTick: function(fn) { setTimeout(fn, 0); },
+        browser: true,
+        title: 'browser',
+        argv: [],
+        on: function() {},
+        addListener: function() {},
+        once: function() {},
+        off: function() {},
+        removeListener: function() {},
+        removeAllListeners: function() {},
+        setMaxListeners: function() {},
+        getMaxListeners: function() { return 0; },
+        listeners: function() { return []; },
+        rawListeners: function() { return []; },
+        emit: function() { return false; },
+        listenerCount: function() { return 0; },
+        prependListener: function() {},
+        prependOnceListener: function() {},
+        eventNames: function() { return []; }
+      };
+    }
+    
+    // Crypto polyfill
+    if (typeof window.crypto === 'undefined') {
+      window.crypto = {
+        getRandomValues: function(arr) {
+          for (var i = 0; i < arr.length; i++) {
+            arr[i] = Math.floor(Math.random() * 256);
+          }
+          return arr;
+        },
+        subtle: {
+          generateKey: function() { return Promise.resolve({}); },
+          sign: function() { return Promise.resolve(new ArrayBuffer(0)); },
+          verify: function() { return Promise.resolve(false); },
+          digest: function() { return Promise.resolve(new ArrayBuffer(0)); },
+          importKey: function() { return Promise.resolve({}); },
+          exportKey: function() { return Promise.resolve(new ArrayBuffer(0)); },
+          encrypt: function() { return Promise.resolve(new ArrayBuffer(0)); },
+          decrypt: function() { return Promise.resolve(new ArrayBuffer(0)); },
+          deriveKey: function() { return Promise.resolve({}); },
+          deriveBits: function() { return Promise.resolve(new ArrayBuffer(0)); },
+          wrapKey: function() { return Promise.resolve(new ArrayBuffer(0)); },
+          unwrapKey: function() { return Promise.resolve({}); }
+        }
+      };
+    }
+    
+    // SetImmediate polyfill
+    if (typeof window.setImmediate === 'undefined') {
+      window.setImmediate = function(fn) { setTimeout(fn, 0); };
+    }
+    
+    // ClearImmediate polyfill
+    if (typeof window.clearImmediate === 'undefined') {
+      window.clearImmediate = function(id) { clearTimeout(id); };
+    }
+    
+    // Additional Node.js globals
+    if (typeof window.__dirname === 'undefined') {
+      window.__dirname = '';
+    }
+    
+    if (typeof window.__filename === 'undefined') {
+      window.__filename = '';
+    }
+    
+    // Stream polyfill
+    if (typeof window.stream === 'undefined') {
+      window.stream = {
+        Readable: function() {},
+        Writable: function() {},
+        Duplex: function() {},
+        Transform: function() {},
+        PassThrough: function() {}
+      };
+    }
+    
+    // Util polyfill
+    if (typeof window.util === 'undefined') {
+      window.util = {
+        inherits: function() {},
+        inspect: function() { return ''; },
+        format: function() { return ''; }
+      };
+    }
+    
+    // Assert polyfill
+    if (typeof window.assert === 'undefined') {
+      window.assert = function(condition, message) {
+        if (!condition) {
+          throw new Error(message || 'Assertion failed');
+        }
+      };
+    }
+    
+    console.log('Polyfills loaded successfully');
+  </script>
 </head>
 <body>
   <app-root></app-root>

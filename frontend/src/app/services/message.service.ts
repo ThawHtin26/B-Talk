@@ -16,9 +16,8 @@ export class MessageService {
   private chatState = inject(ChatStateService);
   private apiUrl = environment.apiUrl;
 
-
   sendMessage(
-    conversationId: number,
+    conversationId: string,
     content: string,
     attachments: File[] = []
   ): Observable<ApiResponse<Message>> {
@@ -59,12 +58,12 @@ export class MessageService {
       );
   }
 
-  markMessagesAsRead(conversationId: number, userId: number): Observable<ApiResponse<void>> {
+  markMessagesAsRead(conversationId: string, userId: string): Observable<ApiResponse<void>> {
     return this.http
       .post<ApiResponse<void>>(
         `${this.apiUrl}/messages/read/conversation/${conversationId}`,
         null,
-        { params: { userId: userId.toString() } }
+        { params: { userId: userId } }
       )
       .pipe(
         catchError((error) => this.handleError('Failed to mark messages as read', error))
@@ -76,50 +75,68 @@ export class MessageService {
     return throwError(() => ({ success: false, message, data: null } as ApiResponse<null>));
   }
 
-getMessages(conversationId: number, page: number = 0, size: number = 20): Observable<ApiResponse<Page<Message>>> {
-  const userId = this.authService.getCurrentUser()?.userId;
-  if (!userId) return throwError(() => new Error('User not authenticated'));
+  getMessages(conversationId: string, page: number = 0, size: number = 20): Observable<ApiResponse<Page<Message>>> {
+    const userId = this.authService.getCurrentUser()?.userId;
+    if (!userId) return throwError(() => new Error('User not authenticated'));
 
-  return this.http
-    .get<ApiResponse<Page<Message>>>(`${this.apiUrl}/messages/conversation/${conversationId}/page`, {
-      params: {
-        userId: userId.toString(),
-        page: page.toString(),
-        size: size.toString()
-      },
-    })
-    .pipe(
-      tap((response) => {
-        if (response.success && response.data) {
-          this.chatState.updateMessagesState(conversationId, response.data.content);
-        }
-      }),
-      catchError((error) => this.handleError('Failed to load messages', error))
-    );
-}
+    return this.http
+      .get<ApiResponse<Page<Message>>>(`${this.apiUrl}/messages/conversation/${conversationId}/page`, {
+        params: {
+          userId: userId,
+          page: page.toString(),
+          size: size.toString()
+        },
+      })
+      .pipe(
+        tap((response) => {
+          if (response.success && response.data) {
+            this.chatState.updateMessagesState(conversationId, response.data.content);
+          }
+        }),
+        catchError((error) => this.handleError('Failed to load messages', error))
+      );
+  }
 
+  getMessagesBefore(conversationId: string, before: Date, page: number = 0, size: number = 20): Observable<ApiResponse<Page<Message>>> {
+    const userId = this.authService.getCurrentUser()?.userId;
+    if (!userId) return throwError(() => new Error('User not authenticated'));
 
-getMessagesBefore(conversationId: number, before: Date, page: number = 0, size: number = 20): Observable<ApiResponse<Page<Message>>> {
-  const userId = this.authService.getCurrentUser()?.userId;
-  if (!userId) return throwError(() => new Error('User not authenticated'));
+    return this.http
+      .get<ApiResponse<Page<Message>>>(`${this.apiUrl}/messages/conversation/${conversationId}/page/before`, {
+        params: {
+          userId: userId,
+          before: before.toISOString(),
+          page: page.toString(),
+          size: size.toString()
+        },
+      })
+      .pipe(
+        tap((response) => {
+          if (response.success && response.data) {
+            console.log("Bla Bla is ",response);
+            this.chatState.prependMessages(conversationId, response.data.content);
+          }
+        }),
+        catchError((error) => this.handleError('Failed to load more messages', error))
+      );
+  }
 
-  return this.http
-    .get<ApiResponse<Page<Message>>>(`${this.apiUrl}/messages/conversation/${conversationId}/page/before`, {
-      params: {
-        userId: userId.toString(),
-        before: before.toISOString(),
-        page: page.toString(),
-        size: size.toString()
-      },
-    })
-    .pipe(
-      tap((response) => {
-        if (response.success && response.data) {
-          console.log("Bla Bla is ",response);
-          this.chatState.prependMessages(conversationId, response.data.content);
-        }
-      }),
-      catchError((error) => this.handleError('Failed to load more messages', error))
-    );
-}
+  // Add method to get messages without pagination
+  getConversationMessages(conversationId: string): Observable<ApiResponse<Message[]>> {
+    const userId = this.authService.getCurrentUser()?.userId;
+    if (!userId) return throwError(() => new Error('User not authenticated'));
+
+    return this.http
+      .get<ApiResponse<Message[]>>(`${this.apiUrl}/messages/conversation/${conversationId}`, {
+        params: { userId: userId }
+      })
+      .pipe(
+        tap((response) => {
+          if (response.success && response.data) {
+            this.chatState.updateMessagesState(conversationId, response.data);
+          }
+        }),
+        catchError((error) => this.handleError('Failed to load messages', error))
+      );
+  }
 }

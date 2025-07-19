@@ -67,7 +67,7 @@ export class CallService implements OnDestroy {
       .subscribe(signal => this.callSignal$.next(signal));
   }
 
-  listenForGroupCallSignals(conversationId: number): void {
+  listenForGroupCallSignals(conversationId: string): void {
     this.wsService
       .subscribe<CallSignal>(`/topic/call/${conversationId}/signals`)
       .pipe(takeUntil(this.destroy$))

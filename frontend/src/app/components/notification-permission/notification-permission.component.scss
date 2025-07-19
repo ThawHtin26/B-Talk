@@ -1,0 +1,151 @@
+.notification-permission {
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.permission-request,
+.permission-denied,
+.permission-granted,
+.notification-not-supported {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  border-radius: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.permission-request {
+  background-color: #e3f2fd;
+  border: 1px solid #bbdefb;
+  color: #1565c0;
+}
+
+.permission-denied {
+  background-color: #fff3e0;
+  border: 1px solid #ffcc02;
+  color: #e65100;
+}
+
+.permission-granted {
+  background-color: #e8f5e8;
+  border: 1px solid #c8e6c9;
+  color: #2e7d32;
+}
+
+.notification-not-supported {
+  background-color: #f5f5f5;
+  border: 1px solid #e0e0e0;
+  color: #616161;
+}
+
+.permission-icon {
+  flex-shrink: 0;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+}
+
+.permission-request .permission-icon {
+  background-color: #bbdefb;
+  color: #1565c0;
+}
+
+.permission-denied .permission-icon {
+  background-color: #ffcc02;
+  color: #e65100;
+}
+
+.permission-granted .permission-icon {
+  background-color: #c8e6c9;
+  color: #2e7d32;
+}
+
+.notification-not-supported .permission-icon {
+  background-color: #e0e0e0;
+  color: #616161;
+}
+
+.permission-content {
+  flex: 1;
+
+  h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+  }
+
+  p {
+    margin: 0 0 1rem 0;
+    font-size: 0.875rem;
+    line-height: 1.4;
+    opacity: 0.8;
+  }
+}
+
+.permission-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+
+  i {
+    font-size: 0.875rem;
+  }
+
+  &.primary {
+    background-color: #007bff;
+    color: white;
+
+    &:hover {
+      background-color: #0056b3;
+    }
+  }
+
+  &.secondary {
+    background-color: transparent;
+    color: inherit;
+    border: 1px solid currentColor;
+
+    &:hover {
+      background-color: rgba(0, 0, 0, 0.05);
+    }
+  }
+}
+
+// Responsive design
+@media (max-width: 480px) {
+  .permission-request,
+  .permission-denied,
+  .permission-granted,
+  .notification-not-supported {
+    flex-direction: column;
+    text-align: center;
+    padding: 1rem;
+  }
+
+  .permission-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    font-size: 1.25rem;
+  }
+
+  .permission-content h3 {
+    font-size: 1rem;
+  }
+
+  .permission-content p {
+    font-size: 0.8125rem;
+  }
+} 

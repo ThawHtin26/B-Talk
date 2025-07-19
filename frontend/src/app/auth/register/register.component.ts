@@ -22,7 +22,7 @@ export class RegisterComponent {
     private router: Router
   ) {
     this.registerForm = this.fb.group({
-      phoneNumber: ['', [Validators.required]],
+      email: ['', [Validators.required, Validators.email]],
       firstName: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(50)]],
       lastName: ['', [Validators.maxLength(50)]],
       password: ['', [Validators.required, Validators.minLength(6), Validators.maxLength(100)]]
@@ -32,7 +32,7 @@ export class RegisterComponent {
   onSubmit() {
     if (this.registerForm.valid) {
       const registerData: RegisterRequest = {
-        phoneNumber: this.registerForm.value.phoneNumber!,
+        email: this.registerForm.value.email!,
         firstName: this.registerForm.value.firstName!,
         lastName: this.registerForm.value.lastName || '', // fallback if null/undefined
         password: this.registerForm.value.password!

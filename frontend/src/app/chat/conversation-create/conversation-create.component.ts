@@ -33,12 +33,13 @@ export class ConversationCreateComponent implements OnInit {
   searchTerm = '';
   isLoading = false;
   error: string | null = null;
-  currentUserId: number | null = null;
+  currentUserId: string | null = null;
   private searchTerms = new Subject<string>();
   private readonly destroy$ = new Subject<void>();
 
   ngOnInit(): void {
-    this.currentUserId = this.authService.getCurrentUser()?.userId || null;
+    const user = this.authService.getCurrentUser();
+    this.currentUserId = user?.userId || null;
     this.setupSearch();
   }
 
@@ -115,8 +116,12 @@ export class ConversationCreateComponent implements OnInit {
     this.cd.markForCheck();
   }
 
-  isSelected(userId: number): boolean {
+  isSelected(userId: string): boolean {
     return this.selectedUsers.some(u => u.userId === userId);
+  }
+
+  isCurrentUser(userId: string): boolean {
+    return this.currentUserId !== null && userId === this.currentUserId;
   }
 
   closeModal(): void {

@@ -122,9 +122,12 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
 
     this.peerConnection.onicecandidate = (event) => {
       if (event.candidate && this.currentCall) {
+        const user = this.authService.getCurrentUser();
+        const callerId = user!.userId;
+        
         const signal: CallSignal = {
           conversationId: this.currentCall.conversationId,
-          callerId: this.authService.getCurrentUser()?.userId!,
+          callerId: callerId,
           recipientId: this.currentCall.recipientId, // Fix: Include recipientId
           callId: this.currentCall.callId, // Fix: Include callId
           type: SignalType.CANDIDATE,
@@ -241,9 +244,12 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
         const answer = await this.peerConnection.createAnswer();
         await this.peerConnection.setLocalDescription(answer);
 
+        const user = this.authService.getCurrentUser();
+        const callerId = user!.userId;
+        
         const answerSignal: CallSignal = {
           conversationId: signal.conversationId,
-          callerId: this.authService.getCurrentUser()!.userId,
+          callerId: callerId,
           recipientId: signal.callerId, // Send back to the original caller
           callId: signal.callId, // Include callId
           type: SignalType.ANSWER,
@@ -428,9 +434,12 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
       });
       await this.peerConnection.setLocalDescription(offer);
 
+      const user = this.authService.getCurrentUser();
+      const callerId = user!.userId;
+      
       const signal: CallSignal = {
         conversationId: this.currentCall.conversationId,
-        callerId: this.authService.getCurrentUser()?.userId!,
+        callerId: callerId,
         recipientId: this.currentCall.recipientId,
         callId: this.currentCall.callId, // Include callId
         type: SignalType.OFFER,

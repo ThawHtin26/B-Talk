@@ -67,15 +67,15 @@
 
       <div class="flex-1 min-w-0">
         <div class="font-medium truncate">{{getConversationName(conv)}}</div>
-        <div class="text-sm text-gray-500 truncate" *ngIf="conv.lastMessage">
-          <span *ngIf="conv.lastMessage.senderId === authService.getCurrentUser()?.userId">You: </span>
-          {{conv.lastMessage.content | truncate:30}}
+        <div class="text-sm text-gray-500 truncate" *ngIf="conv?.lastMessage">
+          <span *ngIf="conv.lastMessage?.senderId === getCurrentUserId()">You: </span>
+          {{(conv.lastMessage?.content || '') | truncate:30}}
         </div>
       </div>
 
       <div class="flex flex-col items-end ml-2">
-        <div class="text-xs text-gray-400 whitespace-nowrap" *ngIf="conv.lastMessage">
-          {{conv.lastMessage.sentAt | date:'shortTime'}}
+        <div class="text-xs text-gray-400 whitespace-nowrap" *ngIf="conv?.lastMessage">
+          {{conv.lastMessage?.sentAt | date:'shortTime'}}
         </div>
         <span *ngIf="hasUnreadMessages(conv)" class="text-xs text-blue-500 mt-1">
           {{getUnreadCount(conv)}}

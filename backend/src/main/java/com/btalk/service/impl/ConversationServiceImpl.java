@@ -1,268 +1,265 @@
 package com.btalk.service.impl;
 
-import com.btalk.dto.*;
-import com.btalk.entity.*;
-import com.btalk.repository.*;
-import com.btalk.service.ConversationService;
-import com.btalk.service.UserService;
 import com.btalk.constants.ConversationType;
+import com.btalk.dto.ConversationDto;
+import com.btalk.dto.ParticipantDto;
+import com.btalk.entity.Conversation;
+import com.btalk.entity.Participant;
+import com.btalk.entity.User;
+import com.btalk.entity.Notification.NotificationType;
+import com.btalk.repository.ConversationRepository;
+import com.btalk.repository.ParticipantRepository;
+import com.btalk.repository.UserRepository;
+import com.btalk.service.ConversationService;
+import com.btalk.service.NotificationService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Collections;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
-@Transactional
+@RequiredArgsConstructor
+@Slf4j
 public class ConversationServiceImpl implements ConversationService {
 
     private final ConversationRepository conversationRepository;
     private final ParticipantRepository participantRepository;
-    private final AttachmentRepository attachmentRepository;
-    private final MessageRepository messageRepository;
-    private final UserService userService;
-    
-    public ConversationServiceImpl(ConversationRepository conversationRepository,
-                                 ParticipantRepository participantRepository,
-                                 MessageRepository messageRepository,
-                                 UserService userService,
-                                 AttachmentRepository attachmentRepository) {
-        this.conversationRepository = conversationRepository;
-        this.participantRepository = participantRepository;
-        this.messageRepository = messageRepository;
-        this.userService = userService;
-        this.attachmentRepository = attachmentRepository;
-    }
+    private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     @Override
-    public ConversationDto createPrivateConversation(Long creatorId, Long participantId) {
+    public ConversationDto createConversation(String name, List<UUID> participantIds, UUID creatorId) {
         try {
-            // Check if private conversation already exists
-            Conversation existing = conversationRepository.findPrivateConversationBetweenUsers(creatorId, participantId);
-            if (existing != null) {
-                return convertToDto(existing, creatorId);
-            }
+            User creator = userRepository.findById(creatorId)
+                    .orElseThrow(() -> new RuntimeException("Creator not found"));
             
-            Conversation conversation = new Conversation();
-            conversation.setType(ConversationType.PRIVATE);
-            conversation.setCreatorId(creatorId);
-            conversation.setName(null);
-            conversation = conversationRepository.save(conversation);
-            
-            addParticipant(conversation.getConversationId(), creatorId);
-            addParticipant(conversation.getConversationId(), participantId);
-            
-            return convertToDto(conversation, creatorId);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to create private conversation: " + e.getMessage(), e);
-        }
-    }
+            Conversation conversation = Conversation.builder()
+                    .name(name)
+                    .creatorId(creator.getUserId())
+                    .createdAt(LocalDateTime.now())
+                    .type(participantIds.size() < 2 ? ConversationType.PRIVATE: ConversationType.GROUP)
+                    .build();
 
-    @Override
-    public ConversationDto createGroupConversation(Long creatorId, String name, List<Long> participantIds) {
-        try {
-            Conversation conversation = new Conversation();
-            conversation.setType(ConversationType.GROUP);
-            conversation.setCreatorId(creatorId);
-            conversation.setName(name);
-            conversation = conversationRepository.save(conversation);
-            
-            addParticipant(conversation.getConversationId(), creatorId);
-            
-            for (Long participantId : participantIds) {
+            Conversation savedConversation = conversationRepository.save(conversation);
+
+            // Add participants
+            for (UUID participantId : participantIds) {
+                User participant = userRepository.findById(participantId)
+                        .orElseThrow(() -> new RuntimeException("Participant not found"));
+
+                Participant participantEntity = Participant.builder()
+                        .conversationId(savedConversation.getConversationId())
+                        .userId(participant.getUserId())
+                        .joinedAt(LocalDateTime.now())
+                        .build();
+
+                participantRepository.save(participantEntity);
+
+                // Send notification to participants (except creator)
                 if (!participantId.equals(creatorId)) {
-                    addParticipant(conversation.getConversationId(), participantId);
+                    String title = "New Conversation";
+                    String message = creator.getUsername() + " added you to a new conversation: " + name;
+                    
+                    notificationService.sendNotificationToUserAsync(
+                        participantId,
+                        title,
+                        message,
+                        NotificationType.NEW_CONVERSATION,
+                        creatorId,
+                        "{\"conversationId\":\"" + savedConversation.getConversationId() + "\",\"conversationName\":\"" + name + "\"}"
+                    );
                 }
             }
-            
-            return convertToDto(conversation, creatorId);
+
+            return convertToDto(savedConversation);
         } catch (Exception e) {
-            throw new RuntimeException("Failed to create group conversation: " + e.getMessage(), e);
+            log.error("Error creating conversation: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to create conversation", e);
         }
     }
 
     @Override
-    public ConversationDto addParticipantsToGroup(Long conversationId, Long adderId, List<Long> participantIds) {
-        try {
-            Conversation conversation = conversationRepository.findById(conversationId)
-                    .orElseThrow(() -> new RuntimeException("Conversation not found"));
-            
-            if (conversation.getType() != ConversationType.GROUP) {
-                throw new RuntimeException("Only group conversations can have participants added");
+    public ConversationDto getConversation(UUID conversationId) {
+        Conversation conversation = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new RuntimeException("Conversation not found"));
+        return convertToDto(conversation);
+    }
+
+    @Override
+    public List<ConversationDto> getUserConversations(UUID userId) {
+        List<Conversation> conversations = conversationRepository.findConversationsByUserId(userId);
+        return conversations.stream()
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<ParticipantDto> getConversationParticipants(UUID conversationId) {
+        List<Participant> participants = participantRepository.findByConversationId(conversationId);
+        return participants.stream()
+                .map(this::convertParticipantToDto)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public void addParticipant(UUID conversationId, UUID userId, UUID addedBy) {
+        Conversation conversation = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new RuntimeException("Conversation not found"));
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        User addedByUser = userRepository.findById(addedBy)
+                .orElseThrow(() -> new RuntimeException("Added by user not found"));
+
+        // Check if participant already exists
+        if (participantRepository.existsByConversationIdAndUserId(conversationId, userId)) {
+            throw new RuntimeException("User is already a participant in this conversation");
+        }
+
+        Participant participant = Participant.builder()
+                .conversationId(conversationId)
+                .userId(userId)
+                .joinedAt(LocalDateTime.now())
+                .build();
+
+        participantRepository.save(participant);
+
+        // Send notification to added user
+        String title = "Added to Conversation";
+        String message = addedByUser.getName() + " added you to: " + conversation.getName();
+        
+        notificationService.sendNotificationToUserAsync(
+            userId,
+            title,
+            message,
+            NotificationType.NEW_CONVERSATION,
+            addedBy,
+            "{\"conversationId\":\"" + conversationId + "\",\"conversationName\":\"" + conversation.getName() + "\"}"
+        );
+    }
+
+    @Override
+    public void removeParticipant(UUID conversationId, UUID userId, UUID removedBy) {
+        Participant participant = participantRepository.findByConversationIdAndUserId(conversationId, userId);
+        if (participant == null) {
+            throw new RuntimeException("Participant not found");
+        }
+
+        participantRepository.delete(participant);
+
+        // Send notification to removed user
+        User removedByUser = userRepository.findById(removedBy)
+                .orElseThrow(() -> new RuntimeException("Removed by user not found"));
+
+        Conversation conversation = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new RuntimeException("Conversation not found"));
+
+        String title = "Removed from Conversation";
+        String message = removedByUser.getName() + " removed you from: " + conversation.getName();
+        
+        notificationService.sendNotificationToUserAsync(
+            userId,
+            title,
+            message,
+            NotificationType.SYSTEM_ANNOUNCEMENT,
+            removedBy,
+            "{\"conversationId\":\"" + conversationId + "\",\"conversationName\":\"" + conversation.getName() + "\"}"
+        );
+    }
+
+    @Override
+    public void updateConversation(UUID conversationId, String name, UUID updatedBy) {
+        Conversation conversation = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new RuntimeException("Conversation not found"));
+
+        conversation.setName(name);
+        conversationRepository.save(conversation);
+
+        // Send notification to all participants
+        List<Participant> participants = participantRepository.findByConversationId(conversationId);
+        User updatedByUser = userRepository.findById(updatedBy)
+                .orElseThrow(() -> new RuntimeException("Updated by user not found"));
+
+        for (Participant participant : participants) {
+            if (!participant.getUserId().equals(updatedBy)) {
+                String title = "Conversation Updated";
+                String message = updatedByUser.getName() + " updated the conversation name to: " + name;
+                
+                notificationService.sendNotificationToUserAsync(
+                    participant.getUserId(),
+                    title,
+                    message,
+                    NotificationType.SYSTEM_ANNOUNCEMENT,
+                    updatedBy,
+                    "{\"conversationId\":\"" + conversationId + "\",\"conversationName\":\"" + name + "\"}"
+                );
             }
-            
-            if (!participantRepository.existsByConversationIdAndUserId(conversationId, adderId)) {
-                throw new RuntimeException("Only participants can add others to the conversation");
-            }
-            
-            for (Long participantId : participantIds) {
-                if (!participantRepository.existsByConversationIdAndUserId(conversationId, participantId)) {
-                    addParticipant(conversationId, participantId);
-                }
-            }
-            
-            return convertToDto(conversation, adderId);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to add participants to group: " + e.getMessage(), e);
         }
     }
 
     @Override
-    public List<ConversationDto> getUserConversations(Long userId) {
-        try {
-            List<Conversation> conversations = conversationRepository.findConversationsByUserId(userId);
-            return conversations.stream()
-                    .map(conv -> convertToDto(conv, userId))
-                    .collect(Collectors.toList());
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to get user conversations: " + e.getMessage(), e);
+    public void deleteConversation(UUID conversationId, UUID deletedBy) {
+        Conversation conversation = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new RuntimeException("Conversation not found"));
+
+        // Delete all participants first
+        List<Participant> participants = participantRepository.findByConversationId(conversationId);
+        participantRepository.deleteAll(participants);
+
+        // Delete the conversation
+        conversationRepository.delete(conversation);
+
+        // Send notification to all participants
+        User deletedByUser = userRepository.findById(deletedBy)
+                .orElseThrow(() -> new RuntimeException("Deleted by user not found"));
+
+        for (Participant participant : participants) {
+            if (!participant.getUserId().equals(deletedBy)) {
+                String title = "Conversation Deleted";
+                String message = deletedByUser.getName() + " deleted the conversation: " + conversation.getName();
+                
+                notificationService.sendNotificationToUserAsync(
+                    participant.getUserId(),
+                    title,
+                    message,
+                    NotificationType.SYSTEM_ANNOUNCEMENT,
+                    deletedBy,
+                    "{\"conversationId\":\"" + conversationId + "\",\"conversationName\":\"" + conversation.getName() + "\"}"
+                );
+            }
         }
     }
 
-    @Override
-    public ConversationDto getConversationDetails(Long conversationId, Long userId) {
-        try {
-            Conversation conversation = conversationRepository.findById(conversationId)
-                    .orElseThrow(() -> new RuntimeException("Conversation not found"));
-            
-            if (!participantRepository.existsByConversationIdAndUserId(conversationId, userId)) {
-                throw new RuntimeException("User is not a participant in this conversation");
-            }
-            
-            return convertToDto(conversation, userId);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to get conversation details: " + e.getMessage(), e);
-        }
+    private ConversationDto convertToDto(Conversation conversation) {
+        // Get participants for this conversation
+        List<ParticipantDto> participants = getConversationParticipants(conversation.getConversationId());
+        
+        return ConversationDto.builder()
+                .conversationId(conversation.getConversationId())
+                .type(conversation.getType())
+                .name(conversation.getName())
+                .creatorId(conversation.getCreatorId())
+                .createdAt(conversation.getCreatedAt())
+                .participants(participants)
+                .build();
     }
 
-    @Override
-    public void leaveConversation(Long conversationId, Long userId) {
-        try {
-            participantRepository.leaveConversation(conversationId, userId);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to leave conversation: " + e.getMessage(), e);
-        }
-    }
-    
-    private void addParticipant(Long conversationId, Long userId) {
-        try {
-            Participant participant = new Participant();
-            participant.setConversationId(conversationId);
-            participant.setUserId(userId);
-            participantRepository.save(participant);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to add participant: " + e.getMessage(), e);
-        }
-    }
-    
-    private ConversationDto convertToDto(Conversation conversation, Long requestingUserId) {
-        try {
-            ConversationDto dto = new ConversationDto();
-            dto.setConversationId(conversation.getConversationId());
-            dto.setType(conversation.getType());
-            dto.setName(conversation.getName());
-            dto.setCreatorId(conversation.getCreatorId());
-            dto.setCreatedAt(conversation.getCreatedAt());
-            
-            List<Participant> participants = participantRepository.findByConversationId(conversation.getConversationId());
-            dto.setParticipants(participants.stream()
-                    .map(this::convertParticipantToDto)
-                    .collect(Collectors.toList()));
-            
-            Message lastMessage = messageRepository.findLastMessageByConversationId(conversation.getConversationId());
-            if (lastMessage != null) {
-                dto.setLastMessage(convertMessageToDto(lastMessage));
-                dto.setLastMessageAt(lastMessage.getSentAt());
-            }
-            
-            int unreadCount = messageRepository.countUnreadMessages(conversation.getConversationId(), requestingUserId);
-            dto.setUnreadCount(unreadCount);
-            
-            return dto;
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to convert conversation to DTO: " + e.getMessage(), e);
-        }
-    }
-    
     private ParticipantDto convertParticipantToDto(Participant participant) {
-        try {
-            ParticipantDto dto = new ParticipantDto();
-            dto.setParticipantId(participant.getParticipantId());
-            dto.setUserId(participant.getUserId());
-            
-            UserDto user = userService.getUserById(participant.getUserId());
-            dto.setUserName(user.getName());
-            dto.setUserPhone(user.getPhoneNumber());
-            
-            dto.setJoinedAt(participant.getJoinedAt());
-            dto.setLeftAt(participant.getLeftAt());
-            return dto;
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to convert participant to DTO: " + e.getMessage(), e);
-        }
-    }
-    
-    private MessageDto convertMessageToDto(Message message) {
-        try {
-            MessageDto dto = new MessageDto();
-            dto.setMessageId(message.getMessageId());
-            dto.setConversationId(message.getConversationId());
-            dto.setSenderId(message.getSenderId());
-            
-            UserDto sender = userService.getUserById(message.getSenderId());
-            dto.setSenderName(sender.getName());
-            
-            dto.setContent(message.getContent());
-            dto.setMessageType(message.getMessageType());
-            dto.setSentAt(message.getSentAt());
-            dto.setStatus("DELIVERED");
-            
-            List<Attachment> attachments = attachmentRepository.findByMessageId(message.getMessageId());
-            dto.setAttachments(attachments.stream()
-                    .map(this::convertAttachmentToDto)
-                    .collect(Collectors.toList()));
-            
-            return dto;
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to convert message to DTO: " + e.getMessage(), e);
-        }
-    }
-    
-    private AttachmentDto convertAttachmentToDto(Attachment attachment) {
-        try {
-            AttachmentDto dto = new AttachmentDto();
-            dto.setAttachmentId(attachment.getAttachmentId());
-            dto.setFileUrl(attachment.getFileUrl());
-            dto.setFileType(attachment.getFileType());
-            dto.setFileSizeBytes(attachment.getFileSizeBytes());
-            return dto;
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to convert attachment to DTO: " + e.getMessage(), e);
-        }
-    }
-    
-
-
-    private MessageDto mapToDto(Message message) {
-        MessageDto dto = new MessageDto();
-        dto.setMessageId(message.getMessageId());
-        dto.setConversationId(message.getConversationId());
-        dto.setSenderId(message.getSenderId());
-        dto.setContent(message.getContent());
-        dto.setMessageType(message.getMessageType());
-        dto.setSentAt(message.getSentAt());
-        dto.setStatus("SENT"); // You can enhance this later
-        dto.setAttachments(Collections.emptyList()); // Placeholder if attachments not used yet
-        dto.setSenderName(null); // Optional: load from user table if needed
-        return dto;
-    }
-
-    @Override
-    public MessageDto getConversationById(Long conversationId) {
-        Message message = messageRepository.findTopByConversationIdOrderBySentAtDesc(conversationId)
-                .orElseThrow(() -> new RuntimeException("No message found for conversation ID: " + conversationId));
-
-        return mapToDto(message);
+        User user = userRepository.findById(participant.getUserId())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+                
+        return ParticipantDto.builder()
+                .participantId(participant.getParticipantId())
+                .userId(participant.getUserId())
+                .userName(user.getName())
+                .userEmail(user.getEmail())
+                .joinedAt(participant.getJoinedAt())
+                .leftAt(participant.getLeftAt())
+                .build();
     }
 }

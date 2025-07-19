@@ -1,17 +1,16 @@
-import { Component, OnInit, OnDestroy, inject } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Subscription, Subject } from 'rxjs';
-import { filter, take, takeUntil } from 'rxjs/operators';
-
+import { Subject, Subscription } from 'rxjs';
+import { filter, takeUntil } from 'rxjs/operators';
 import { ChatService } from '../../services/chat.service';
 import { AuthService } from '../../services/auth.service';
+import { CallService } from '../../services/call.service';
+import { WebSocketService } from '../../services/web-socket.service';
 import { ConversationListComponent } from '../conversation-list/conversation-list.component';
 import { MessageListComponent } from '../message-list/message-list.component';
 import { MessageInputComponent } from '../message-input/message-input.component';
 import { VideoCallComponent } from '../video-call/video-call.component';
 import { ConversationCreateComponent } from '../conversation-create/conversation-create.component';
-import { CallService } from '../../services/call.service';
-import { CallStatus, CallType } from '../../models/call.enum';
 import { CallRequest } from '../../models/call.request';
 
 @Component({
@@ -32,22 +31,27 @@ export class ChatContainerComponent implements OnInit, OnDestroy {
   private chatService = inject(ChatService);
   private authService = inject(AuthService);
   private callService = inject(CallService);
+  private webSocketService = inject(WebSocketService);
 
   private readonly destroy$ = new Subject<void>();
   private subscriptions = new Subscription();
 
   showVideoCall = false;
-  activeConversationId!: number;
-  private currentUserId: number | null = null;
+  activeConversationId!: string;
+  private currentUserId: string | null = null;
   incomingCall: CallRequest | null = null;
 
   ngOnInit(): void {
-    this.currentUserId = this.authService.getCurrentUser()?.userId ?? null;
+    const user = this.authService.getCurrentUser();
+    this.currentUserId = user?.userId || null;
 
     if (!this.currentUserId) {
       console.error('No user ID available');
       return;
     }
+
+    // Ensure WebSocket is initialized
+    this.initializeWebSocket();
 
     this.subscriptions.add(
       this.chatService.getConversations().pipe(
@@ -80,60 +84,18 @@ export class ChatContainerComponent implements OnInit, OnDestroy {
       })
     );
   }
-    startVideoCall(): void {
-    if (!this.activeConversationId || !this.currentUserId) {
-      console.error('Missing required data for video call');
-      return;
-    }
 
-    this.chatService.activeConversation$
-      .pipe(take(1))
-      .subscribe({
-        next: (conversation) => {
-          if (!conversation) {
-            console.error('No active conversation');
-            return;
-          }
-
-          const recipient = conversation.participants.find(
-            (p: any) => p.userId !== this.currentUserId
-          );
-
-          if (!recipient) {
-            console.error('Recipient not found');
-            return;
-          }
-
-          const callId = this.generateCallId();
-          const request: CallRequest = {
-            callId,
-            callerId: this.currentUserId,
-            recipientId: recipient.userId,
-            conversationId: this.activeConversationId,
-            callType: CallType.PRIVATE,
-            status: CallStatus.RINGING
-          };
-
-          this.callService.initiateCall(request);
-          this.showVideoCall = true;
-        },
-        error: (err) => {
-          console.error('Error starting video call:', err);
-        }
-      });
+  private initializeWebSocket(): void {
+    console.log(' Initializing WebSocket in chat container...');
+    this.webSocketService.initializeConnectionIfAuthenticated();
   }
 
-
-  private generateCallId(): string {
-    return Math.random().toString(36).substring(2, 15);
+  private loadMessages(conversationId: string): void {
+    this.chatService.getMessages(conversationId).subscribe();
   }
 
-  private loadMessages(conversationId: number): void {
-    this.subscriptions.add(
-      this.chatService.getMessages(conversationId).pipe(
-        takeUntil(this.destroy$)
-      ).subscribe()
-    );
+  startVideoCall(): void {
+    this.showVideoCall = true;
   }
 
   endVideoCall(): void {

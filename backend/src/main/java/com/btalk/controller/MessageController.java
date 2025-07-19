@@ -26,6 +26,7 @@ import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/messages")
@@ -64,7 +65,13 @@ public class MessageController {
             messageDto.setAttachments(attachmentDtos);
         }
         
-        MessageDto savedMessage = messageService.sendMessage(messageDto);
+        // Convert MessageDto to MessageRequest
+        com.btalk.dto.request.MessageRequest request = com.btalk.dto.request.MessageRequest.builder()
+                .content(messageDto.getContent())
+                .messageType(messageDto.getMessageType())
+                .build();
+        
+        MessageDto savedMessage = messageService.sendMessage(messageDto.getConversationId(), messageDto.getSenderId(), request);
         
         // Broadcast message
         messagingTemplate.convertAndSend(
@@ -80,24 +87,24 @@ public class MessageController {
 
     @GetMapping("/conversation/{conversationId}")
     public ApiResponse<List<MessageDto>> getConversationMessages(
-            @PathVariable Long conversationId,
-            @RequestParam Long userId) {
+            @PathVariable UUID conversationId,
+            @RequestParam UUID userId) {
         List<MessageDto> messages = messageService.getConversationMessages(conversationId, userId);
         return ApiResponse.success("Messages retrieved successfully", messages);
     }
 
     @GetMapping("/conversation/{conversationId}/unread")
     public ApiResponse<List<MessageDto>> getUnreadMessages(
-            @PathVariable Long conversationId,
-            @RequestParam Long userId) {
+            @PathVariable UUID conversationId,
+            @RequestParam UUID userId) {
         List<MessageDto> unreadMessages = messageService.getUnreadMessages(conversationId, userId);
         return ApiResponse.success("Unread messages retrieved successfully", unreadMessages);
     }
 
     @GetMapping("/conversation/{conversationId}/new")
     public ApiResponse<List<MessageDto>> getNewMessages(
-            @PathVariable Long conversationId,
-            @RequestParam Long userId,
+            @PathVariable UUID conversationId,
+            @RequestParam UUID userId,
             @RequestParam LocalDateTime after) {
         List<MessageDto> newMessages = messageService.getNewMessages(conversationId, userId, after);
         return ApiResponse.success("New messages retrieved successfully", newMessages);
@@ -105,8 +112,8 @@ public class MessageController {
 
     @PostMapping("/read/conversation/{conversationId}")
     public ApiResponse<Void> markMessagesAsRead(
-            @PathVariable Long conversationId,
-            @RequestParam Long userId) {
+            @PathVariable UUID conversationId,
+            @RequestParam UUID userId) {
         messageService.markMessagesAsRead(conversationId, userId);
         // Broadcast read receipt to conversation participants
         messagingTemplate.convertAndSend(
@@ -118,8 +125,8 @@ public class MessageController {
 
     @PostMapping("/read/{messageId}")
     public ApiResponse<Void> markMessageAsRead(
-            @PathVariable Long messageId,
-            @RequestParam Long userId) {
+            @PathVariable UUID messageId,
+            @RequestParam UUID userId) {
         messageService.markMessageAsRead(messageId, userId);
         // Broadcast single message read receipt
         MessageDto message = messageService.getMessage(messageId);
@@ -132,8 +139,8 @@ public class MessageController {
     
     @GetMapping("/conversation/{conversationId}/page")
     public ApiResponse<Page<MessageDto>> getConversationMessagesPaginated(
-            @PathVariable Long conversationId,
-            @RequestParam Long userId,
+            @PathVariable UUID conversationId,
+            @RequestParam UUID userId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         Page<MessageDto> messages = messageService.getConversationMessages(conversationId, userId, page, size);
@@ -142,8 +149,8 @@ public class MessageController {
 
     @GetMapping("/conversation/{conversationId}/page/before")
     public ApiResponse<Page<MessageDto>> getMessagesBefore(
-            @PathVariable Long conversationId,
-            @RequestParam Long userId,
+            @PathVariable UUID conversationId,
+            @RequestParam UUID userId,
             @RequestParam Instant  before,  // Accept as String
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {

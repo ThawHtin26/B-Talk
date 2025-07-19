@@ -13,8 +13,8 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 public class UserResponse {
-    private Long userId;
-    private String phoneNumber;
+    private String userId;
+    private String email;
     private String name;
     private String profilePhotoUrl;
     private LocalDateTime createdAt;

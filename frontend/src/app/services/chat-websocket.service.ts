@@ -1,6 +1,7 @@
 import { Injectable, inject, OnDestroy } from '@angular/core';
 import { Subject, Subscription } from 'rxjs';
-import { filter, takeUntil, take } from 'rxjs/operators';
+import { filter, takeUntil, take, catchError, retry, delay } from 'rxjs/operators';
+import { of } from 'rxjs';
 import { WebSocketService } from './web-socket.service';
 import { ApiResponse } from '../models/api-response';
 import { ConversationUpdatedEvent, NewMessageEvent } from '../models/event.type';
@@ -23,17 +24,26 @@ export class ChatWebSocketService implements OnDestroy {
             response.data?.eventType === 'NEW_CONVERSATION' &&
             !!response.data.conversation
         ),
-        takeUntil(this.destroy$)
+        takeUntil(this.destroy$),
+        catchError((error) => {
+          console.error('Conversation update error:', error);
+          // Return empty observable to prevent error propagation
+          return of(null);
+        }),
+        filter(response => response !== null)
       )
       .subscribe({
         next: (response) => {
-          this.chatState.notifyNewConversation(response.data.conversation);
+          if (response && response.data?.conversation) {
+            console.log('Received new conversation via WebSocket:', response.data.conversation);
+            this.chatState.notifyNewConversation(response.data.conversation);
+          }
         },
         error: (err) => console.error('WebSocket error:', err),
       });
   }
 
-  setupRealTimeListeners(conversationId: number): void {
+  setupRealTimeListeners(conversationId: string): void {
     this.subscriptions.unsubscribe();
     this.subscriptions = new Subscription();
 
@@ -46,17 +56,27 @@ export class ChatWebSocketService implements OnDestroy {
             response.data?.eventType === 'NEW_CONVERSATION' &&
             !!response.data.conversation
         ),
-        takeUntil(this.destroy$)
+        takeUntil(this.destroy$),
+        catchError((error) => {
+          console.error('Conversation update error:', error);
+          return of(null);
+        }),
+        filter(response => response !== null)
       )
       .subscribe({
         next: (response) => {
-          this.chatState.notifyNewConversation(response.data.conversation);
-          if (response.data.conversation) {
-            this.chatState.updateConversationInLocalState(response.data.conversation);
+          if (response && response.data?.conversation) {
+            console.log('Received conversation update via WebSocket:', response.data.conversation);
+            this.chatState.notifyNewConversation(response.data.conversation);
+            if (response.data.conversation) {
+              this.chatState.updateConversationInLocalState(response.data.conversation);
+            }
           }
         },
         error: (err) => console.error('Conversation update error:', err),
       });
+
+    this.subscriptions.add(convSub);
 
     const msgSub = this.webSocketService
       .listenForMessageUpdates(conversationId)
@@ -67,19 +87,23 @@ export class ChatWebSocketService implements OnDestroy {
             response.data?.eventType === 'NEW_MESSAGE' &&
             !!response.data.message
         ),
-        takeUntil(this.destroy$)
+        takeUntil(this.destroy$),
+        catchError((error) => {
+          console.error('Message update error:', error);
+          return of(null);
+        }),
+        filter(response => response !== null)
       )
       .subscribe({
         next: (response) => {
-          this.chatState.notifyNewMessage(response.data.message);
-          if (response.data.conversationId) {
-            this.chatState.updateLastMessageInLocalState(response.data.message);
+          if (response && response.data?.message) {
+            console.log('Received new message via WebSocket:', response.data.message);
+            this.chatState.notifyNewMessage(response.data.message);
           }
         },
         error: (err) => console.error('Message update error:', err),
       });
 
-    this.subscriptions.add(convSub);
     this.subscriptions.add(msgSub);
   }
 

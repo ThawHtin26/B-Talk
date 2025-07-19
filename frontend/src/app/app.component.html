@@ -1,1 +1,23 @@
-<router-outlet></router-outlet>
+<div class="app-container">
+  <!-- Header with Notification Bell -->
+  <header class="app-header" *ngIf="isAuthenticated">
+    <div class="header-content">
+      <div class="logo">
+        <i class="fas fa-comments"></i>
+        <span>B-Talk</span>
+      </div>
+      <div class="header-actions">
+        <app-notification-bell></app-notification-bell>
+        <button (click)="logout()" class="logout-btn">
+          <i class="fas fa-sign-out-alt"></i>
+          Logout
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="app-main">
+    <router-outlet></router-outlet>
+  </main>
+</div>

@@ -50,8 +50,8 @@ export class MessageListComponent implements OnInit, OnDestroy, AfterViewChecked
   private sanitizer = inject(DomSanitizer);
   private dialog = inject(MatDialog);
   private subscriptions = new Subscription();
-  private audioElements: { [key: number]: HTMLAudioElement } = {};
-  private currentlyPlayingAudio: number | null = null;
+  private audioElements: { [key: string]: HTMLAudioElement } = {};
+  private currentlyPlayingAudio: string | null = null;
 
   @ViewChild('messageContainer') private messageContainer!: ElementRef;
 
@@ -59,7 +59,7 @@ export class MessageListComponent implements OnInit, OnDestroy, AfterViewChecked
   activeConversation: Conversation | null = null;
   isLoading = false;
   error: string | null = null;
-  currentUserId: number | null = null;
+  currentUserId: string | null = null;
   private shouldScrollToBottom = true;
   private pageSize = 20;
   private currentPage = 0;
@@ -70,7 +70,8 @@ export class MessageListComponent implements OnInit, OnDestroy, AfterViewChecked
   private filenameFromUrlPipe = new FilenameFromUrlPipe();
 
   ngOnInit(): void {
-    this.currentUserId = this.authService.getCurrentUser()?.userId ?? null;
+    const user = this.authService.getCurrentUser();
+    this.currentUserId = user?.userId || null;
     this.setupConversationListener();
     this.setupMessageUpdatesListener();
   }
@@ -188,151 +189,129 @@ export class MessageListComponent implements OnInit, OnDestroy, AfterViewChecked
     );
   }
 
-onScroll(): void {
-  if (this.isLoadingMore || !this.hasMoreMessages || !this.activeConversation || this.messages.length === 0) {
-    return;
-  }
+  onScroll(): void {
+    if (this.isLoadingMore || !this.hasMoreMessages || !this.activeConversation || this.messages.length === 0) {
+      return;
+    }
 
-  const element = this.messageContainer.nativeElement;
-  const atTop = element.scrollTop === 0;
+    const element = this.messageContainer.nativeElement;
+    const atTop = element.scrollTop === 0;
 
-  if (!atTop) {
-    return;
-  }
+    if (!atTop) {
+      return;
+    }
 
-  this.isLoadingMore = true;
-  this.cd.markForCheck();
+    this.isLoadingMore = true;
+    this.cd.markForCheck();
 
-  const oldestMessage = this.messages[0];
-  const beforeDate = new Date(oldestMessage.sentAt);
+    const firstMessage = this.messages[0];
+    if (!firstMessage) {
+      this.isLoadingMore = false;
+      this.cd.markForCheck();
+      return;
+    }
 
-  // Save the current scroll height and first message element
-  const scrollHeightBefore = element.scrollHeight;
-  const firstMessageElement = element.querySelector('.flex.flex-col');
-
-  this.chatService.getMessagesBefore(
-    this.activeConversation.conversationId,
-    beforeDate,
-    this.currentPage + 1,
-    this.pageSize
-  ).subscribe({
-    next: (response) => {
-      if (response.success && response.data) {
-        // Store the new messages
-        const newMessages = response.data.content.reverse();
-        console.log("NEw MEssage",newMessages)
-        // Prepend new messages
-        this.messages = [...newMessages, ...this.messages];
-        this.currentPage++;
-        this.hasMoreMessages = !response.data.last;
-
-        // Wait for Angular to update the DOM
-        setTimeout(() => {
-          if (firstMessageElement && newMessages.length > 0) {
-            // Calculate the height of the new content
-            const newFirstMessageElement = element.querySelector('.flex.flex-col');
-            const newContentHeight = scrollHeightBefore - element.scrollHeight;
-
-            // Adjust the scroll position to maintain the view
-            element.scrollTop = newFirstMessageElement.clientHeight * newMessages.length;
+    this.chatService
+      .getMessagesBefore(
+        this.activeConversation.conversationId,
+        firstMessage.sentAt,
+        this.currentPage,
+        this.pageSize
+      )
+      .subscribe({
+        next: (response) => {
+          if (response.success && response.data) {
+            const newMessages = response.data.content.reverse();
+            this.messages = [...newMessages, ...this.messages];
+            this.hasMoreMessages = !response.data.last;
+            this.currentPage++;
           }
-        }, 0);
-      }
-      this.isLoadingMore = false;
-      this.cd.markForCheck();
-    },
-    error: (err) => {
-      console.error('Error loading more messages:', err);
-      this.isLoadingMore = false;
-      this.cd.markForCheck();
-    }
-  });
-}
+          this.isLoadingMore = false;
+          this.cd.markForCheck();
+        },
+        error: (err) => {
+          console.error('Failed to load more messages:', err);
+          this.isLoadingMore = false;
+          this.cd.markForCheck();
+        },
+      });
+  }
+
   getFileIcon(attachment: Attachment): string {
-    const extension = attachment.fileUrl.split('.').pop()?.toLowerCase();
-    switch (extension) {
-      case 'pdf': return 'picture_as_pdf';
-      case 'doc':
-      case 'docx': return 'description';
-      case 'xls':
-      case 'xlsx': return 'grid_on';
-      case 'ppt':
-      case 'pptx': return 'slideshow';
-      case 'zip':
-      case 'rar':
-      case '7z': return 'folder_zip';
-      case 'txt': return 'notes';
-      case 'mp3':
-      case 'wav':
-      case 'ogg': return 'audiotrack';
-      case 'jpg':
-      case 'jpeg':
-      case 'png':
-      case 'gif': return 'image';
-      case 'mp4':
-      case 'mov':
-      case 'avi': return 'videocam';
-      default: return 'insert_drive_file';
+    const fileType = attachment.fileType.toLowerCase();
+    if (fileType.startsWith('image/')) {
+      return 'image';
+    } else if (fileType.startsWith('video/')) {
+      return 'videocam';
+    } else if (fileType.startsWith('audio/')) {
+      return 'audiotrack';
+    } else if (fileType.includes('pdf')) {
+      return 'picture_as_pdf';
+    } else if (fileType.includes('word') || fileType.includes('document')) {
+      return 'description';
+    } else if (fileType.includes('excel') || fileType.includes('spreadsheet')) {
+      return 'table_chart';
+    } else if (fileType.includes('powerpoint') || fileType.includes('presentation')) {
+      return 'slideshow';
+    } else {
+      return 'insert_drive_file';
     }
   }
 
-  isMyMessage(senderId: number): boolean {
-    return senderId === this.currentUserId;
+  isMyMessage(senderId: string): boolean {
+    return this.currentUserId !== null && senderId === this.currentUserId;
   }
 
-  trackByMessageId(index: number, message: Message): number {
-    return message?.messageId ?? index;
+  trackByMessageId(index: number, message: Message): string {
+    return message.messageId || index.toString();
   }
 
   openMediaViewer(attachment: Attachment): void {
-    if (attachment.fileType.startsWith('image/') || attachment.fileType.startsWith('video/')) {
-      this.dialog.open(MediaViewerComponent, {
-        width: '90vw',
-        maxWidth: '1200px',
-        height: '90vh',
-        panelClass: 'media-viewer-dialog',
-        data: {
-          mediaUrl: this.getSafeFileUrl(attachment.fileUrl),
-          mediaType: attachment.fileType,
-          fileName: this.filenameFromUrlPipe.transform(attachment.fileUrl),
-        },
-      });
-    }
+    const dialogRef = this.dialog.open(MediaViewerComponent, {
+      width: '90vw',
+      height: '90vh',
+      data: {
+        fileUrl: this.getFullFileUrl(attachment.fileUrl),
+        fileName: this.filenameFromUrlPipe.transform(attachment.fileUrl),
+        fileType: attachment.fileType
+      }
+    });
   }
 
   getSafeFileUrl(fileUrl: string): SafeUrl {
-    return this.sanitizer.bypassSecurityTrustUrl(`${environment.baseUrl}${fileUrl}`);
+    return this.sanitizer.bypassSecurityTrustUrl(this.getFullFileUrl(fileUrl));
   }
 
   toggleAudioPlayback(attachment: Attachment): void {
-  if (!this.audioElements[attachment.attachmentId]) {
-    this.audioElements[attachment.attachmentId] = new Audio(`${environment.wsUrl}${attachment.fileUrl}`);
-    this.audioElements[attachment.attachmentId].addEventListener('ended', () => this.onAudioEnded(attachment));
-  }
+    const audioId = attachment.attachmentId;
+    
+    if (this.currentlyPlayingAudio === audioId) {
+      // Stop current audio
+      const audio = this.audioElements[audioId];
+      if (audio) {
+        audio.pause();
+        audio.currentTime = 0;
+      }
+      this.currentlyPlayingAudio = null;
+    } else {
+      // Stop any currently playing audio
+      if (this.currentlyPlayingAudio) {
+        const currentAudio = this.audioElements[this.currentlyPlayingAudio];
+        if (currentAudio) {
+          currentAudio.pause();
+          currentAudio.currentTime = 0;
+        }
+      }
 
-  const audio = this.audioElements[attachment.attachmentId];
-
-  if (this.currentlyPlayingAudio === attachment.attachmentId) {
-    audio.pause();
-    this.currentlyPlayingAudio = null;
-  } else {
-    if (this.currentlyPlayingAudio !== null) {
-      this.audioElements[this.currentlyPlayingAudio].pause();
+      // Start new audio
+      const audio = new Audio(this.getFullFileUrl(attachment.fileUrl));
+      audio.addEventListener('ended', () => this.onAudioEnded(attachment));
+      
+      this.audioElements[audioId] = audio;
+      this.currentlyPlayingAudio = audioId;
+      audio.play();
     }
-
-    audio.currentTime = 0;
-    audio.play()
-      .then(() => {
-        this.currentlyPlayingAudio = attachment.attachmentId;
-        this.cd.markForCheck();
-      })
-      .catch(err => {
-        console.error('Error playing audio:', err);
-        this.currentlyPlayingAudio = null;
-      });
   }
-}
-
 
   isAudioPlaying(attachment: Attachment): boolean {
     return this.currentlyPlayingAudio === attachment.attachmentId;
@@ -340,52 +319,41 @@ onScroll(): void {
 
   onAudioEnded(attachment: Attachment): void {
     this.currentlyPlayingAudio = null;
-    this.cd.markForCheck();
   }
 
   formatFileSize(bytes: number): string {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   }
 
   showDateSeparator(currentMessage: Message, allMessages: Message[], index?: number): boolean {
-  // For the first message, always show the date separator
-  if (index === 0) return true;
-
-  // If index is not provided, find it (less efficient but works for *ngFor without index)
-  const currentIndex = index !== undefined ? index : allMessages.findIndex(m => m.messageId === currentMessage.messageId);
-
-  // If this is the first message or we couldn't find the index, show the separator
-  if (currentIndex <= 0) return true;
-
-  const currentDate = new Date(currentMessage.sentAt);
-  const previousDate = new Date(allMessages[currentIndex - 1].sentAt);
-
-  // Show separator if the dates are different
-  return (
-    currentDate.getDate() !== previousDate.getDate() ||
-    currentDate.getMonth() !== previousDate.getMonth() ||
-    currentDate.getFullYear() !== previousDate.getFullYear()
-  );
-}
-
-getFullFileUrl(fileUrl: string): string {
-  if (!fileUrl.startsWith('http')) {
-    return `${environment.baseUrl}${fileUrl}`;
+    if (index === 0) return true;
+    
+    const previousMessage = allMessages[index! - 1];
+    if (!previousMessage) return true;
+    
+    const currentDate = new Date(currentMessage.sentAt).toDateString();
+    const previousDate = new Date(previousMessage.sentAt).toDateString();
+    
+    return currentDate !== previousDate;
   }
-  return fileUrl;
-}
 
+  getFullFileUrl(fileUrl: string): string {
+    if (fileUrl.startsWith('http://') || fileUrl.startsWith('https://')) {
+      return fileUrl;
+    }
+    return `${environment.apiUrl}/files/${fileUrl}`;
+  }
 
   ngOnDestroy(): void {
     this.subscriptions.unsubscribe();
-    // Clean up audio elements
+    // Stop all audio playback
     Object.values(this.audioElements).forEach(audio => {
       audio.pause();
-      audio.removeEventListener('ended', () => {});
+      audio.currentTime = 0;
     });
   }
 }

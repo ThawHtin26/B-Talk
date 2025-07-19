@@ -1,0 +1,81 @@
+<div class="notification-page">
+      <div class="page-header">
+        <h1>Notifications</h1>
+        <div class="header-actions">
+          <button (click)="markAllAsRead()" class="btn btn-primary">
+            <i class="fas fa-check-double"></i>
+            Mark All as Read
+          </button>
+          <button (click)="clearAllNotifications()" class="btn btn-danger">
+            <i class="fas fa-trash"></i>
+            Clear All
+          </button>
+        </div>
+      </div>
+
+      <div class="notification-filters">
+        <button 
+          *ngFor="let filter of filters" 
+          [class.active]="activeFilter === filter.value"
+          (click)="setFilter(filter.value)"
+          class="filter-btn">
+          {{ filter.label }}
+          <span *ngIf="filter.count > 0" class="count">({{ filter.count }})</span>
+        </button>
+      </div>
+
+      <div class="notifications-container">
+        <div *ngIf="loading" class="loading">
+          <i class="fas fa-spinner fa-spin"></i>
+          Loading notifications...
+        </div>
+
+        <div *ngIf="!loading && notifications.length === 0" class="empty-state">
+          <i class="fas fa-bell-slash"></i>
+          <h3>No notifications</h3>
+          <p>You're all caught up!</p>
+        </div>
+
+        <div *ngIf="!loading && notifications.length > 0" class="notifications-list">
+          <div *ngFor="let notification of notifications" 
+               class="notification-item"
+               [class.unread]="!notification.isRead"
+               (click)="onNotificationClick(notification)">
+            
+            <div class="notification-icon">
+              <i [class]="getNotificationIcon(notification.type)" 
+                 [class]="getNotificationClass(notification.type)"></i>
+            </div>
+
+            <div class="notification-content">
+              <div class="notification-header">
+                <div class="notification-title">{{ notification.title }}</div>
+                <div class="notification-time">{{ formatTimestamp(notification.createdAt) }}</div>
+              </div>
+              <div class="notification-message">{{ notification.message }}</div>
+              <div *ngIf="notification.senderName" class="notification-sender">
+                From: {{ notification.senderName }}
+              </div>
+            </div>
+
+            <div class="notification-actions">
+              <button *ngIf="!notification.isRead" 
+                      (click)="markAsRead(notification); $event.stopPropagation()"
+                      class="action-btn">
+                <i class="fas fa-check"></i>
+              </button>
+              <button (click)="deleteNotification(notification); $event.stopPropagation()"
+                      class="action-btn delete">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div *ngIf="hasMore" class="load-more">
+          <button (click)="loadMore()" class="btn btn-outline-primary">
+            Load More
+          </button>
+        </div>
+      </div>
+    </div>

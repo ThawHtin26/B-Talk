@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -22,21 +23,21 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public UserDto getUserById(Long userId) {
+    public UserDto getUserById(UUID userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
         return convertToDto(user);
     }
 
     @Override
-    public UserDto getUserByPhoneNumber(String phoneNumber) {
-        User user = userRepository.findByPhoneNumber(phoneNumber)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with phone number: " + phoneNumber));
+    public UserDto getUserByEmail(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
         return convertToDto(user);
     }
 
     @Transactional
-    public UserDto updateUserProfile(Long userId, UserDto userDto) {
+    public UserDto updateUserProfile(UUID userId, UserDto userDto) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
         
@@ -44,7 +45,6 @@ public class UserServiceImpl implements UserService {
             user.setName(userDto.getName());
         }
 
-        
         if (userDto.getProfilePhotoUrl() != null) {
             user.setProfilePhotoUrl(userDto.getProfilePhotoUrl());
         }
@@ -54,7 +54,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Transactional
-    public void updateUserStatus(Long userId, UserStatus status) {
+    public void updateUserStatus(UUID userId, UserStatus status) {
         userRepository.updateUserStatus(userId, status);
     }
 
@@ -64,7 +64,7 @@ public class UserServiceImpl implements UserService {
                 .collect(Collectors.toList());
     }
 
-    public List<UserDto> getUsersByIds(List<Long> userIds) {
+    public List<UserDto> getUsersByIds(List<UUID> userIds) {
         return userRepository.findAllByIds(userIds).stream()
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
@@ -73,7 +73,7 @@ public class UserServiceImpl implements UserService {
     private UserDto convertToDto(User user) {
         UserDto dto = new UserDto();
         dto.setUserId(user.getUserId());
-        dto.setPhoneNumber(user.getPhoneNumber());
+        dto.setEmail(user.getEmail());
         dto.setName(user.getName());
         dto.setProfilePhotoUrl(user.getProfilePhotoUrl());
         return dto;

@@ -69,9 +69,8 @@ public class WebRtcController {
             }
             
             logger.debug("Forwarding private signal to user {}", signal.getRecipientId());
-            messagingTemplate.convertAndSendToUser(
-                signal.getRecipientId().toString(),
-                "/queue/call/signals",
+            messagingTemplate.convertAndSend(
+                "/user/" + signal.getRecipientId().toString() + "/queue/call/signals",
                 signal
             );
         } catch (Exception e) {
@@ -103,9 +102,8 @@ public class WebRtcController {
         try {
             if (signal.getSignalType() == SignalType.RINGING) {
                 // Handle ringing notification
-                messagingTemplate.convertAndSendToUser(
-                    signal.getCallerId().toString(),
-                    "/queue/call/status",
+                messagingTemplate.convertAndSend(
+                    "/user/" + signal.getCallerId().toString() + "/queue/call/status",
                     signal
                 );
             } else if (signal.getSignalType() == SignalType.HANGUP) {

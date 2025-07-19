@@ -39,7 +39,7 @@
           [(ngModel)]="searchTerm"
           (input)="search(searchTerm)"
           class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          placeholder="Search by name or phoneNumber"
+          placeholder="Search by name or email"
         />
         <svg
           class="absolute left-3 top-2.5 h-5 w-5 text-gray-400"
@@ -85,8 +85,8 @@
         *ngFor="let user of filteredUsers"
         (click)="toggleUserSelection(user)"
         [class.bg-blue-50]="isSelected(user.userId)"
-        [class.opacity-50]="user.userId === currentUserId"
-        [class.cursor-not-allowed]="user.userId === currentUserId"
+        [class.opacity-50]="isCurrentUser(user.userId)"
+        [class.cursor-not-allowed]="isCurrentUser(user.userId)"
         class="p-3 hover:bg-gray-50 cursor-pointer flex items-center"
       >
         <img
@@ -97,12 +97,12 @@
           <div class="font-medium text-gray-900">
             {{ user.name }}
             <span
-              *ngIf="user.userId === currentUserId"
+              *ngIf="isCurrentUser(user.userId)"
               class="text-sm text-gray-500"
               >(You)</span
             >
           </div>
-          <div class="text-sm text-gray-500">{{ user.phoneNumber }}</div>
+          <div class="text-sm text-gray-500">{{ user.email }}</div>
         </div>
       </div>
       <div

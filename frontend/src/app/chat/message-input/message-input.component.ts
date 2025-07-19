@@ -179,7 +179,7 @@ private resetForm(): void {
 // }
 
 
-  private sendTextMessage(conversationId: number): void {
+  private sendTextMessage(conversationId: string): void {
     this.chatService.sendMessage(
       conversationId,
       this.messageContent,

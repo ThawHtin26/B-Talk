@@ -6,6 +6,7 @@ import com.btalk.service.UserService;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/users")
@@ -27,7 +28,7 @@ public class UserController {
     }
 
     @GetMapping("/batch")
-    public ApiResponse<List<UserDto>> getUsersByIds(@RequestParam List<Long> ids) {
+    public ApiResponse<List<UserDto>> getUsersByIds(@RequestParam List<UUID> ids) {
         try {
             List<UserDto> users = userService.getUsersByIds(ids);
             return ApiResponse.success("Users retrieved successfully", users);

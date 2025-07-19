@@ -6,19 +6,20 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import java.util.List;
+import java.util.UUID;
 
-public interface ParticipantRepository extends JpaRepository<Participant, Long> {
-    List<Participant> findByConversationId(Long conversationId);
+public interface ParticipantRepository extends JpaRepository<Participant, UUID> {
+    List<Participant> findByConversationId(UUID conversationId);
     
     @Query("SELECT p FROM Participant p WHERE p.conversationId = :conversationId AND p.userId = :userId")
-    Participant findByConversationIdAndUserId(@Param("conversationId") Long conversationId, @Param("userId") Long userId);
+    Participant findByConversationIdAndUserId(@Param("conversationId") UUID conversationId, @Param("userId") UUID userId);
     
     @Modifying
     @Query("UPDATE Participant p SET p.leftAt = CURRENT_TIMESTAMP WHERE p.conversationId = :conversationId AND p.userId = :userId")
-    void leaveConversation(@Param("conversationId") Long conversationId, @Param("userId") Long userId);
+    void leaveConversation(@Param("conversationId") UUID conversationId, @Param("userId") UUID userId);
     
-    boolean existsByConversationIdAndUserId(Long conversationId, Long userId);
+    boolean existsByConversationIdAndUserId(UUID conversationId, UUID userId);
     
     @Query("SELECT p.userId FROM Participant p WHERE p.conversationId = :conversationId")
-    List<Long> findUserIdsByConversationId(@Param("conversationId") Long conversationId);
+    List<UUID> findUserIdsByConversationId(@Param("conversationId") UUID conversationId);
 }

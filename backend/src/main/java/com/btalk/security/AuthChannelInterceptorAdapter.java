@@ -1,6 +1,7 @@
 package com.btalk.security;
 
 import com.btalk.entity.User;
+
 import com.btalk.repository.UserRepository;
 import com.btalk.utils.JwtTokenUtils;
 import lombok.RequiredArgsConstructor;
@@ -32,28 +33,33 @@ public class AuthChannelInterceptorAdapter implements ChannelInterceptor {
         StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
 
         if (accessor != null && StompCommand.CONNECT.equals(accessor.getCommand())) {
+            log.info("Processing WebSocket CONNECT request");
             String token = accessor.getFirstNativeHeader("Authorization");
 
             if (token != null && token.startsWith("Bearer ")) {
                 token = token.substring(7);
+                log.info("Token found, length: {}", token.length());
 
                 try {
-                    String phoneNumber = jwtTokenUtil.extractUsername(token);
-                    Optional<User> optionalUser = userRepository.findByPhoneNumber(phoneNumber);
+                    String email = jwtTokenUtil.extractUsername(token);
+                    log.info("Extracted email from token: {}", email);
+                    Optional<User> optionalUser = userRepository.findByEmail(email);
 
                     if (optionalUser.isPresent()) {
-                        Long userId = optionalUser.get().getUserId();
+                        String userId = optionalUser.get().getUserId().toString();
 
-                        // ✅ Set custom Principal here
+                        // Set custom Principal here
                         accessor.setUser(new StompPrincipal(userId.toString()));
 
-                        log.info("WebSocket connected userId={}", userId);
+                        log.info("WebSocket connected successfully for userId={}", userId);
                     } else {
-                        log.warn("No user found for phoneNumber: {}", phoneNumber);
+                        log.warn("No user found for email: {}", email);
                     }
                 } catch (Exception e) {
                     log.error("Token parsing failed: {}", e.getMessage());
                 }
+            } else {
+                log.warn("No valid Authorization header found in WebSocket CONNECT");
             }
         }
 

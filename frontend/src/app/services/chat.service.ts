@@ -50,27 +50,27 @@ export class ChatService implements OnDestroy {
     return this.conversationService.getConversations();
   }
 
-  createPrivateConversation(participantId: number): Observable<any> {
+  createPrivateConversation(participantId: string): Observable<any> {
     return this.conversationService.createPrivateConversation(participantId);
   }
 
-  createGroupConversation(name: string, participantIds: number[]): Observable<any> {
+  createGroupConversation(name: string, participantIds: string[]): Observable<any> {
     return this.conversationService.createGroupConversation(name, participantIds);
   }
 
-  getMessages(conversationId: number): Observable<any> {
+  getMessages(conversationId: string): Observable<any> {
     return this.messageService.getMessages(conversationId);
   }
 
-  getMessagesBefore(conversationId: number, before: Date,page:number,size:number): Observable<any>{
-    return this.messageService.getMessagesBefore(conversationId,before,page,size);
+  getMessagesBefore(conversationId: string, before: Date, page: number, size: number): Observable<any> {
+    return this.messageService.getMessagesBefore(conversationId, before, page, size);
   }
 
-  sendMessage(conversationId: number, content: string, attachments: File[] = []): Observable<any> {
+  sendMessage(conversationId: string, content: string, attachments: File[] = []): Observable<any> {
     return this.messageService.sendMessage(conversationId, content, attachments);
   }
 
-  markMessagesAsRead(conversationId: number, userId: number): Observable<any> {
+  markMessagesAsRead(conversationId: string, userId: string): Observable<any> {
     return this.messageService.markMessagesAsRead(conversationId, userId);
   }
 

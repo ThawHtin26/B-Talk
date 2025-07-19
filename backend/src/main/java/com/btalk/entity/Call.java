@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 import com.btalk.constants.CallStatus;
 import com.btalk.constants.CallType;
@@ -18,10 +19,10 @@ public class Call {
     private String callId;
 
     @Column(name = "caller_id", nullable = false)
-    private Long callerId;
+    private UUID callerId;
 
     @Column(name = "conversation_id", nullable = false)
-    private Long conversationId;
+    private UUID conversationId;
 
     @Column(name = "start_time", nullable = false)
     private LocalDateTime startTime;
@@ -36,6 +37,5 @@ public class Call {
     @Column(name = "status", nullable = false)
     @Enumerated(EnumType.STRING)
     private CallStatus status; // e.g., "RINGING", "ACCEPTED", "REJECTED", "ENDED"
-  
 }
 

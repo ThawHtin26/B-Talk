@@ -1,6 +1,6 @@
 export interface UserResponse {
-  userId: number;
-  phoneNumber: string;
+  userId: string; // UUID as string
+  email: string;
   name: string;
   profilePhotoUrl?: string;
   createdAt: string;

@@ -1,0 +1,87 @@
+<div class="notification-bell">
+  <!-- Notification permission request -->
+  <div *ngIf="!isSupported || isPermissionDenied" class="notification-warning">
+    <i class="fas fa-exclamation-triangle"></i>
+    <span>Enable notifications for better experience</span>
+    <button (click)="requestNotificationPermission()" class="permission-btn">
+      Enable Notifications
+    </button>
+  </div>
+
+  <!-- Notification bell -->
+  <div *ngIf="isSupported && isPermissionGranted" class="bell-container">
+    <div class="bell-wrapper" (click)="toggleDropdown()">
+      <i class="fas fa-bell"></i>
+      <span *ngIf="unreadCount > 0" class="badge">{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
+    </div>
+    
+
+    <!-- Latest notification toast -->
+    <div *ngIf="latestNotification" class="latest-notification">
+      <div class="notification-content">
+        <i [class]="getNotificationIcon(latestNotification.type)" 
+           [class]="getNotificationClass(latestNotification.type)"></i>
+        <div class="notification-text">
+          <div class="notification-title">{{ latestNotification.title }}</div>
+          <div class="notification-message">{{ latestNotification.message }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dropdown -->
+    <div *ngIf="showDropdown" class="dropdown">
+      <div class="dropdown-header">
+        <h3>Notifications</h3>
+        <div class="dropdown-actions">
+          <button (click)="markAllAsRead()" class="action-btn">
+            <i class="fas fa-check-double"></i>
+          </button>
+          <button (click)="clearAllNotifications()" class="action-btn">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="notifications-list">
+        <div *ngIf="notifications.length === 0" class="empty-state">
+          <i class="fas fa-bell-slash"></i>
+          <p>No notifications</p>
+        </div>
+
+        <div *ngFor="let notification of notifications" 
+             class="notification-item"
+             [class.unread]="!notification.isRead"
+             (click)="onNotificationClick(notification)">
+          
+          <div class="notification-icon">
+            <i [class]="getNotificationIcon(notification.type)" 
+               [class]="getNotificationClass(notification.type)"></i>
+          </div>
+
+          <div class="notification-content">
+            <div class="notification-header">
+              <div class="notification-title">{{ notification.title }}</div>
+              <div class="notification-time">{{ formatTimestamp(notification.createdAt) }}</div>
+            </div>
+            <div class="notification-message">{{ notification.message }}</div>
+            <div *ngIf="notification.senderName" class="notification-sender">
+              From: {{ notification.senderName }}
+            </div>
+          </div>
+
+          <div class="notification-actions">
+            <button *ngIf="!notification.isRead" 
+                    (click)="markAsRead(notification); $event.stopPropagation()"
+                    class="action-btn">
+              <i class="fas fa-check"></i>
+            </button>
+            <button (click)="deleteNotification(notification); $event.stopPropagation()"
+                    class="action-btn delete">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div> 

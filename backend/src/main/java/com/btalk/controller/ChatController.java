@@ -2,6 +2,7 @@ package com.btalk.controller;
 
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
@@ -39,10 +40,16 @@ public class ChatController {
     }
 
     @MessageMapping("/chat/{conversationId}/send")
-    public void sendMessage(@DestinationVariable Long conversationId, @Payload MessageDto messageDto) {
+    public void sendMessage(@DestinationVariable UUID conversationId, @Payload MessageDto messageDto) {
         try {
-            MessageDto savedMessage = messageService.sendMessage(messageDto);
-            List<Long> participantIds = participantRepository.findUserIdsByConversationId(conversationId);
+            // Convert MessageDto to MessageRequest
+            com.btalk.dto.request.MessageRequest request = com.btalk.dto.request.MessageRequest.builder()
+                    .content(messageDto.getContent())
+                    .messageType(messageDto.getMessageType())
+                    .build();
+            
+            MessageDto savedMessage = messageService.sendMessage(conversationId, messageDto.getSenderId(), request);
+            List<UUID> participantIds = participantRepository.findUserIdsByConversationId(conversationId);
 
             messagingTemplate.convertAndSend(
                 "/topic/conversation/" + conversationId + "/messages",
@@ -52,28 +59,26 @@ public class ChatController {
                 ))
             );
 
-            for (Long participantId : participantIds) {
-            	messagingTemplate.convertAndSendToUser(
-            		    participantId.toString(),
-            		    "/queue/conversation-updates",
+            for (UUID participantId : participantIds) {
+            	messagingTemplate.convertAndSend(
+            		    "/user/" + participantId.toString() + "/queue/conversation-updates",
             		    ApiResponse.success("Conversation updated", Map.of(
             		        "eventType", "CONVERSATION_UPDATED",
-            		        "conversation", conversationService.getConversationById(conversationId)
+            		        "conversation", conversationService.getConversation(conversationId)
             		    ))
             		);
             }
         } catch (Exception e) {
             log.error("Failed to send message", e);
-            messagingTemplate.convertAndSendToUser(
-                messageDto.getSenderId().toString(),
-                "/queue/errors",
+            messagingTemplate.convertAndSend(
+                "/user/" + messageDto.getSenderId().toString() + "/queue/errors",
                 ApiResponse.error("Failed to send message: " + e.getMessage())
             );
         }
     }
 
     @MessageMapping("/chat/{conversationId}/read")
-    public void markMessagesAsRead(@DestinationVariable Long conversationId, @Payload Long userId) {
+    public void markMessagesAsRead(@DestinationVariable UUID conversationId, @Payload UUID userId) {
         messageService.markMessagesAsRead(conversationId, userId);
     }
 }

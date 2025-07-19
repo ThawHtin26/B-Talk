@@ -22,7 +22,7 @@ export class UserService {
     );
   }
 
-  getUsersByIds(ids: number[]): Observable<ApiResponse<UserResponse[]>> {
+  getUsersByIds(ids: string[]): Observable<ApiResponse<UserResponse[]>> {
     return this.http.get<ApiResponse<UserResponse[]>>(`${this.apiUrl}/batch`, {
       params: { ids: ids.join(',') }
     }).pipe(

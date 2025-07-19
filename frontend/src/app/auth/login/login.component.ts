@@ -22,7 +22,7 @@ export class LoginComponent {
     private router: Router
   ) {
     this.loginForm = this.fb.group({
-      phoneNumber: ['', Validators.required],
+      email: ['', [Validators.required, Validators.email]],
       password: ['', Validators.required]
     });
   }
@@ -30,7 +30,7 @@ export class LoginComponent {
   onSubmit() {
     if (this.loginForm.valid) {
       const loginData: LoginRequest = {
-        phoneNumber: this.loginForm.value.phoneNumber!,
+        email: this.loginForm.value.email!,
         password: this.loginForm.value.password!
       };
       this.authService.login(loginData).subscribe({

@@ -13,21 +13,22 @@ import com.btalk.constants.UserStatus;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.UUID;
 
 @Entity
 @Table(name = "users", uniqueConstraints = {
-        @UniqueConstraint(columnNames = "phone_number")
+        @UniqueConstraint(columnNames = "email")
 })
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class User implements UserDetails {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long userId;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID userId;
 
-    @Column(nullable = false)
-    private String phoneNumber;
+    @Column(nullable = false, unique = true)
+    private String email;
 
     @Column(nullable = false)
     private String name;
@@ -44,6 +45,10 @@ public class User implements UserDetails {
     @Enumerated(EnumType.STRING)
     private UserStatus status = UserStatus.OFFLINE;
 
+    // Password reset fields
+    private String resetToken;
+    private LocalDateTime resetTokenExpiry;
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return Collections.emptyList(); 
@@ -56,6 +61,6 @@ public class User implements UserDetails {
 
     @Override
     public String getUsername() {
-        return this.phoneNumber;
+        return this.email;
     }
 }

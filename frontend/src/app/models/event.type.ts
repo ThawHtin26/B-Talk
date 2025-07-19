@@ -4,7 +4,7 @@ import { Message } from "./message";
 export interface NewMessageEvent {
   eventType: 'NEW_MESSAGE';
   message: Message;
-  conversationId?: number;
+  conversationId?: string;
 }
 
 export interface ConversationUpdatedEvent {
