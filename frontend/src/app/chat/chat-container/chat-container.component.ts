@@ -73,11 +73,24 @@ export class ChatContainerComponent implements OnInit, OnDestroy {
         if (conv) {
           this.activeConversationId = conv.conversationId;
           this.loadMessages(conv.conversationId);
-          // Reset video call state when conversation changes
-          this.endVideoCall();
+          // Only reset video call state if no active call is ongoing
+          if (!this.callService.isCallActive()) {
+            this.endVideoCall();
+          }
         }
       })
     );
+
+    // Check for existing call state on initialization
+    const existingCall = this.callService.getCurrentCallState();
+    if (existingCall) {
+      console.log('[ChatContainer] Found existing call state:', existingCall);
+      this.incomingCall = existingCall;
+      this.videoCallConversationId = existingCall.conversationId;
+      this.videoCallRecipientId = existingCall.recipientId || undefined;
+      this.isInitiatingVideoCall = false;
+      this.showVideoCall = true;
+    }
 
     // Handle incoming calls (for receiver)
     this.subscriptions.add(

@@ -21,6 +21,10 @@ export class CallService implements OnDestroy {
   private callEnded$ = new Subject<CallRequest>();
   private callSignal$ = new Subject<CallSignal>();
 
+  // Global call state management
+  private currentCallState$ = new BehaviorSubject<CallRequest | null>(null);
+  private isCallActive$ = new BehaviorSubject<boolean>(false);
+
   constructor(
     private http: HttpClient,
     private wsService: WebSocketService,
@@ -34,6 +38,37 @@ export class CallService implements OnDestroy {
     this.listenForCallSignals();
   }
 
+  // Global state getters
+  getCurrentCallState(): CallRequest | null {
+    return this.currentCallState$.value;
+  }
+
+  getCurrentCallState$(): Observable<CallRequest | null> {
+    return this.currentCallState$.asObservable();
+  }
+
+  isCallActive(): boolean {
+    return this.isCallActive$.value;
+  }
+
+  getIsCallActive$(): Observable<boolean> {
+    return this.isCallActive$.asObservable();
+  }
+
+  // Global state setters
+  setCurrentCallState(call: CallRequest | null): void {
+    this.currentCallState$.next(call);
+  }
+
+  setIsCallActive(isActive: boolean): void {
+    this.isCallActive$.next(isActive);
+  }
+
+  clearCallState(): void {
+    this.currentCallState$.next(null);
+    this.isCallActive$.next(false);
+  }
+
   private listenForIncomingCalls(): void {
     console.log('[CallService] Setting up incoming call listener...');
     this.wsService
@@ -42,6 +77,8 @@ export class CallService implements OnDestroy {
       .subscribe({
         next: (request) => {
           console.log('[CallService] RECEIVER: Received incoming call:', request);
+          this.setCurrentCallState(request);
+          this.setIsCallActive(false);
           this.incomingCall$.next(request);
         },
         error: (error) => {
@@ -58,6 +95,8 @@ export class CallService implements OnDestroy {
       .subscribe({
         next: (request) => {
           console.log('[CallService] CALLER: Received call initiated confirmation:', request);
+          this.setCurrentCallState(request);
+          this.setIsCallActive(false);
           this.callInitiated$.next(request);
         },
         error: (error) => {
@@ -70,21 +109,30 @@ export class CallService implements OnDestroy {
     this.wsService
       .subscribe<CallRequest>('/user/queue/call/answered')
       .pipe(takeUntil(this.destroy$))
-      .subscribe(request => this.callAnswered$.next(request));
+      .subscribe(request => {
+        this.setIsCallActive(true);
+        this.callAnswered$.next(request);
+      });
   }
 
   private listenForCallRejected(): void {
     this.wsService
       .subscribe<CallRequest>('/user/queue/call/rejected')
       .pipe(takeUntil(this.destroy$))
-      .subscribe(request => this.callRejected$.next(request));
+      .subscribe(request => {
+        this.clearCallState();
+        this.callRejected$.next(request);
+      });
   }
 
   private listenForCallEnded(): void {
     this.wsService
       .subscribe<CallRequest>('/user/queue/call/ended')
       .pipe(takeUntil(this.destroy$))
-      .subscribe(request => this.callEnded$.next(request));
+      .subscribe(request => {
+        this.clearCallState();
+        this.callEnded$.next(request);
+      });
   }
 
   private listenForCallSignals(): void {

@@ -82,6 +82,98 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
     
     // Test WebRTC connection on component initialization
     this.testWebRTCConnection();
+    
+    // Check if we're resuming an existing call
+    this.checkForExistingCall();
+    
+    // Restore call state if we're recreating the component during an active call
+    this.restoreCallState();
+  }
+
+  private checkForExistingCall(): void {
+    // If we have conversationId and recipientId, we might be resuming a call
+    if (this.conversationId && this.recipientId && !this.currentCall) {
+      console.log('[VideoCall] Checking for existing call state...');
+      // Check global call state
+      const globalCallState = this.callService.getCurrentCallState();
+      if (globalCallState && globalCallState.conversationId === this.conversationId) {
+        console.log('[VideoCall] Found existing global call state:', globalCallState);
+        this.currentCall = globalCallState;
+        this.isCallActive = this.callService.isCallActive();
+        this.isRinging = !this.isCallActive;
+        if (this.isRinging) {
+          this.playRingtone();
+        }
+        this.cdr.detectChanges();
+      }
+    }
+  }
+
+  private restoreCallState(): void {
+    // This method is called when the component is recreated during an active call
+    const globalCallState = this.callService.getCurrentCallState();
+    if (globalCallState && this.conversationId && globalCallState.conversationId === this.conversationId) {
+      console.log('[VideoCall] Restoring call state from global state');
+      this.currentCall = globalCallState;
+      this.isCallActive = this.callService.isCallActive();
+      this.isRinging = !this.isCallActive;
+      
+      if (this.isCallActive) {
+        // If call is active, we need to re-establish WebRTC connection
+        this.reestablishConnection();
+      } else if (this.isRinging) {
+        this.playRingtone();
+      }
+      
+      this.cdr.detectChanges();
+    }
+  }
+
+  private async reestablishConnection(): Promise<void> {
+    console.log('[VideoCall] Re-establishing WebRTC connection...');
+    try {
+      // Re-setup WebRTC
+      this.setupWebRTC();
+      
+      // Re-acquire media stream
+      await this.acquireMediaStream();
+      
+      // Re-add tracks to peer connection
+      if (this.localStream && this.peerConnection) {
+        this.localStream.getTracks().forEach(track => {
+          this.peerConnection!.addTrack(track, this.localStream!);
+        });
+      }
+      
+      console.log('[VideoCall] Connection re-established successfully');
+    } catch (error) {
+      console.error('[VideoCall] Failed to re-establish connection:', error);
+      this.handleMediaError(error);
+    }
+  }
+
+  private async acquireMediaStream(): Promise<void> {
+    try {
+      const constraints = {
+        audio: {
+          deviceId: this.currentAudioDeviceId ? { exact: this.currentAudioDeviceId } : undefined
+        },
+        video: {
+          deviceId: this.currentVideoDeviceId ? { exact: this.currentVideoDeviceId } : undefined,
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        }
+      };
+
+      this.localStream = await navigator.mediaDevices.getUserMedia(constraints);
+      
+      if (this.localVideoRef?.nativeElement) {
+        this.localVideoRef.nativeElement.srcObject = this.localStream;
+      }
+    } catch (error) {
+      console.error('[VideoCall] Failed to acquire media stream:', error);
+      throw error;
+    }
   }
 
   ngOnDestroy(): void {
@@ -879,6 +971,7 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
     }
     this.stopCallTimer();
     this.cleanup();
+    this.callService.clearCallState(); // Clear global state when hanging up
     this.endCall.emit();
   }
 
@@ -918,6 +1011,13 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
     this.isScreenSharing = false;
     this.currentCall = null;
     this.callDuration = 0;
+    
+    // Clear global call state only if this component is being destroyed
+    // and we're not just switching conversations
+    if (!this.conversationId || !this.recipientId) {
+      this.callService.clearCallState();
+    }
+    
     this.cdr.detectChanges();
   }
 
