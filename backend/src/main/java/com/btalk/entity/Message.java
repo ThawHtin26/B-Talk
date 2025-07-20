@@ -9,7 +9,6 @@ import org.hibernate.annotations.CreationTimestamp;
 import com.btalk.constants.MessageType;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 @Entity
 @Table(name = "messages")
@@ -19,13 +18,13 @@ import java.util.UUID;
 public class Message {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID messageId;
+    private String messageId;
 
     @Column(name = "conversation_id", nullable = false)
-    private UUID conversationId;
+    private String conversationId;
 
     @Column(name = "sender_id", nullable = false)
-    private UUID senderId;
+    private String senderId;
 
     private String content;
 
@@ -35,4 +34,14 @@ public class Message {
 
     @CreationTimestamp
     private LocalDateTime sentAt;
+
+    @Column(name = "call_duration")
+    private Integer callDuration; // Duration in seconds for call messages
+
+    @Column(name = "call_type")
+    @Enumerated(EnumType.STRING)
+    private com.btalk.constants.CallType callType; // Type of call for call messages
+
+    @Column(name = "call_status")
+    private String callStatus; // Status of the call (MISSED, ENDED, REJECTED)
 }

@@ -21,7 +21,7 @@ export class ChatWebSocketService implements OnDestroy {
         filter(
           (response): response is ApiResponse<ConversationUpdatedEvent> =>
             response.success &&
-            response.data?.eventType === 'NEW_CONVERSATION' &&
+            (response.data?.eventType === 'NEW_CONVERSATION' || response.data?.eventType === 'CONVERSATION_UPDATED') &&
             !!response.data.conversation
         ),
         takeUntil(this.destroy$),
@@ -35,7 +35,7 @@ export class ChatWebSocketService implements OnDestroy {
       .subscribe({
         next: (response) => {
           if (response && response.data?.conversation) {
-            console.log('Received new conversation via WebSocket:', response.data.conversation);
+            console.log('Received conversation update via WebSocket:', response.data.conversation);
             this.chatState.notifyNewConversation(response.data.conversation);
           }
         },
@@ -53,7 +53,7 @@ export class ChatWebSocketService implements OnDestroy {
         filter(
           (response): response is ApiResponse<ConversationUpdatedEvent> =>
             response.success &&
-            response.data?.eventType === 'NEW_CONVERSATION' &&
+            (response.data?.eventType === 'NEW_CONVERSATION' || response.data?.eventType === 'CONVERSATION_UPDATED') &&
             !!response.data.conversation
         ),
         takeUntil(this.destroy$),

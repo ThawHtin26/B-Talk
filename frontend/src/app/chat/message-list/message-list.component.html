@@ -64,6 +64,30 @@
            [class.ml-10]="!isMyMessage(message.senderId)"
            [class.mr-10]="isMyMessage(message.senderId)">
 
+        <!-- Call message -->
+        <div *ngIf="message.messageType === 'CALL'" class="flex items-center gap-3">
+          <div class="flex items-center justify-center h-10 w-10 rounded-full"
+               [class.bg-red-500]="message.callStatus === 'MISSED'"
+               [class.bg-green-500]="message.callStatus === 'ENDED'"
+               [class.bg-gray-500]="message.callStatus === 'REJECTED'"
+               [class.bg-blue-500]="isMyMessage(message.senderId)">
+            <mat-icon class="text-white">
+              {{ message.callType === 'VIDEO' ? 'videocam' : 'call' }}
+            </mat-icon>
+          </div>
+          <div class="flex-1">
+            <div class="text-sm font-medium">
+              {{ message.callType === 'VIDEO' ? 'Video call' : 'Voice call' }}
+              <span *ngIf="message.callStatus === 'MISSED'" class="text-red-400">(Missed)</span>
+              <span *ngIf="message.callStatus === 'REJECTED'" class="text-gray-400">(Declined)</span>
+            </div>
+            <div class="text-xs opacity-75">
+              <span *ngIf="message.callDuration">{{ formatCallDuration(message.callDuration) }}</span>
+              <span *ngIf="!message.callDuration">{{ message.callStatus === 'MISSED' ? 'Missed call' : 'Call ended' }}</span>
+            </div>
+          </div>
+        </div>
+
         <!-- Text message content -->
         <div *ngIf="message.messageType === 'TEXT'" class="whitespace-pre-wrap break-all">
           {{ message.content | lineBreak:30 }}
@@ -72,10 +96,12 @@
         <!-- Enhanced attachment preview -->
         <div *ngFor="let attachment of message.attachments" class="mt-2">
           <!-- Image attachment -->
-          <div *ngIf="attachment.fileType.startsWith('image/')" class="rounded-lg overflow-hidden">
+          <div *ngIf="attachment.fileType.startsWith('image/')" class="rounded-lg overflow-hidden max-w-full">
             <img [src]="(getSafeFileUrl(attachment.fileUrl))"
-                 class="max-w-full max-h-64 object-cover cursor-pointer hover:opacity-90 transition-opacity"
-                 (click)="openMediaViewer(attachment)">
+                 class="w-full max-w-full h-auto max-h-64 object-cover cursor-pointer hover:opacity-90 transition-opacity rounded-lg"
+                 (click)="openMediaViewer(attachment)"
+                 loading="lazy"
+                 alt="Image attachment">
             <div class="text-xs mt-1 truncate flex items-center gap-1"
                  [class.text-blue-100]="isMyMessage(message.senderId)"
                  [class.text-gray-600]="!isMyMessage(message.senderId)">
@@ -85,9 +111,11 @@
           </div>
 
           <!-- Video attachment -->
-          <div *ngIf="attachment.fileType.startsWith('video/')" class="rounded-lg overflow-hidden">
-            <video controls class="max-w-full max-h-64" preload="metadata" poster="assets/video-thumbnail-placeholder.png">
-              <source [src]="attachment.fileUrl" [type]="attachment.fileType">
+          <div *ngIf="attachment.fileType.startsWith('video/')" class="rounded-lg overflow-hidden max-w-full">
+            <video controls class="w-full max-w-full h-auto max-h-64 object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity" 
+                   preload="metadata"
+                   (click)="openMediaViewer(attachment)">
+              <source [src]="getSafeFileUrl(attachment.fileUrl)" [type]="attachment.fileType">
               Your browser does not support the video tag.
             </video>
             <div class="text-xs mt-1 truncate flex items-center gap-1"

@@ -3,7 +3,6 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import java.util.UUID;
 
 @Entity
 @Table(name = "attachments")
@@ -13,10 +12,10 @@ import java.util.UUID;
 public class Attachment {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID attachmentId;
+    private String attachmentId;
 
     @Column(name = "message_id", nullable = false)
-    private UUID messageId;
+    private String messageId;
 
     @Column(nullable = false)
     private String fileUrl;

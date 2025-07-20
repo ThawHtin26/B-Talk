@@ -40,6 +40,11 @@ export class ChatContainerComponent implements OnInit, OnDestroy {
   activeConversationId!: string;
   private currentUserId: string | null = null;
   incomingCall: CallRequest | null = null;
+  
+  // Video call parameters
+  videoCallConversationId?: string;
+  videoCallRecipientId?: string;
+  isInitiatingVideoCall = false;
 
   ngOnInit(): void {
     const user = this.authService.getCurrentUser();
@@ -68,25 +73,58 @@ export class ChatContainerComponent implements OnInit, OnDestroy {
           this.activeConversationId = conv.conversationId;
           this.loadMessages(conv.conversationId);
           // Reset video call state when conversation changes
-          this.showVideoCall = false;
+          this.endVideoCall();
         }
       })
     );
 
+    // Handle incoming calls (for receiver)
     this.subscriptions.add(
       this.callService.getIncomingCall$().pipe(
         takeUntil(this.destroy$)
       ).subscribe(request => {
         if (request) {
+          console.log('[ChatContainer] RECEIVER: Incoming call received:', request);
           this.incomingCall = request;
+          this.videoCallConversationId = request.conversationId;
+          this.videoCallRecipientId = request.callerId || undefined;
+          this.isInitiatingVideoCall = false;
           this.showVideoCall = true;
+          console.log('[ChatContainer] RECEIVER: Video call component should now be visible');
         }
+      })
+    );
+
+    // Handle call initiated confirmations (for caller)
+    this.subscriptions.add(
+      this.callService.getCallInitiated$().pipe(
+        takeUntil(this.destroy$)
+      ).subscribe(request => {
+        if (request) {
+          console.log('[ChatContainer] CALLER: Call initiated confirmation received:', request);
+          this.incomingCall = request;
+          this.videoCallConversationId = request.conversationId;
+          this.videoCallRecipientId = request.recipientId || undefined;
+          this.isInitiatingVideoCall = true;
+          this.showVideoCall = true;
+          console.log('[ChatContainer] CALLER: Video call component should now be visible for caller');
+        }
+      })
+    );
+
+    // Handle call ended events
+    this.subscriptions.add(
+      this.callService.getCallEnded$().pipe(
+        takeUntil(this.destroy$)
+      ).subscribe(() => {
+        console.log('[ChatContainer] Call ended, cleaning up video call component');
+        this.endVideoCall();
       })
     );
   }
 
   private initializeWebSocket(): void {
-    console.log(' Initializing WebSocket in chat container...');
+    console.log('Initializing WebSocket in chat container...');
     this.webSocketService.initializeConnectionIfAuthenticated();
   }
 
@@ -95,11 +133,43 @@ export class ChatContainerComponent implements OnInit, OnDestroy {
   }
 
   startVideoCall(): void {
-    this.showVideoCall = true;
+    console.log('[ChatContainer] Starting video call...');
+    // Get the active conversation to determine recipient
+    this.chatService.activeConversation$.pipe(
+      takeUntil(this.destroy$)
+    ).subscribe(conversation => {
+      if (conversation) {
+        console.log('[ChatContainer] Active conversation:', conversation);
+        // For private conversations, find the other participant
+        if (conversation.type === 'PRIVATE' && conversation.participants) {
+          const currentUser = this.authService.getCurrentUser();
+          const otherParticipant = conversation.participants.find(
+            p => p.userId !== currentUser?.userId
+          );
+          
+          if (otherParticipant) {
+            console.log('[ChatContainer] Starting video call with participant:', otherParticipant);
+            this.videoCallConversationId = conversation.conversationId;
+            this.videoCallRecipientId = otherParticipant.userId;
+            this.isInitiatingVideoCall = true;
+            this.showVideoCall = true;
+          } else {
+            console.error('[ChatContainer] Could not find other participant for video call');
+          }
+        } else {
+          // For group calls, we'll need to implement group call logic
+          console.log('[ChatContainer] Group video calls not yet implemented');
+        }
+      }
+    });
   }
 
   endVideoCall(): void {
+    console.log('[ChatContainer] Ending video call...');
     this.showVideoCall = false;
+    this.isInitiatingVideoCall = false;
+    this.videoCallConversationId = undefined;
+    this.videoCallRecipientId = undefined;
   }
 
   ngOnDestroy(): void {

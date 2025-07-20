@@ -1,12 +1,13 @@
 package com.btalk.controller;
 
 import com.btalk.dto.NotificationDto;
+
 import com.btalk.dto.NotificationRequest;
 import com.btalk.service.NotificationService;
 import com.btalk.service.impl.NotificationServiceImpl;
 import com.btalk.dto.response.ApiResponse;
 import com.btalk.entity.User;
-import com.btalk.entity.Notification.NotificationType;
+import com.btalk.constants.NotificationType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -19,7 +20,6 @@ import com.btalk.repository.UserRepository;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 import java.util.List;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/notifications")
@@ -37,7 +37,7 @@ public class NotificationController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         try {
-            UUID userId = extractUserIdFromAuthentication(authentication);
+            String userId = extractUserIdFromAuthentication(authentication);
             Pageable pageable = PageRequest.of(page, size);
             Page<NotificationDto> notifications = notificationService.getUserNotifications(userId, pageable);
             
@@ -58,7 +58,7 @@ public class NotificationController {
     @GetMapping("/unread")
     public ResponseEntity<ApiResponse<List<NotificationDto>>> getUnreadNotifications(Authentication authentication) {
         try {
-            UUID userId = extractUserIdFromAuthentication(authentication);
+            String userId = extractUserIdFromAuthentication(authentication);
             List<NotificationDto> notifications = notificationService.getUnreadNotifications(userId);
             
             return ResponseEntity.ok(ApiResponse.<List<NotificationDto>>builder()
@@ -78,7 +78,7 @@ public class NotificationController {
     @GetMapping("/unread-count")
     public ResponseEntity<ApiResponse<Long>> getUnreadCount(Authentication authentication) {
         try {
-            UUID userId = extractUserIdFromAuthentication(authentication);
+            String userId = extractUserIdFromAuthentication(authentication);
             Long count = notificationService.getUnreadCount(userId);
             
             return ResponseEntity.ok(ApiResponse.<Long>builder()
@@ -98,9 +98,9 @@ public class NotificationController {
     @PostMapping("/{notificationId}/read")
     public ResponseEntity<ApiResponse<Void>> markAsRead(
             Authentication authentication,
-            @PathVariable UUID notificationId) {
+            @PathVariable String notificationId) {
         try {
-            UUID userId = extractUserIdFromAuthentication(authentication);
+            String userId = extractUserIdFromAuthentication(authentication);
             notificationService.markAsRead(notificationId);
             
             return ResponseEntity.ok(ApiResponse.<Void>builder()
@@ -119,7 +119,7 @@ public class NotificationController {
     @PostMapping("/mark-all-read")
     public ResponseEntity<ApiResponse<Void>> markAllAsRead(Authentication authentication) {
         try {
-            UUID userId = extractUserIdFromAuthentication(authentication);
+            String userId = extractUserIdFromAuthentication(authentication);
             notificationService.markAllAsRead(userId);
             
             return ResponseEntity.ok(ApiResponse.<Void>builder()
@@ -138,9 +138,9 @@ public class NotificationController {
     @DeleteMapping("/{notificationId}")
     public ResponseEntity<ApiResponse<Void>> deleteNotification(
             Authentication authentication,
-            @PathVariable UUID notificationId) {
+            @PathVariable String notificationId) {
         try {
-            UUID userId = extractUserIdFromAuthentication(authentication);
+            String userId = extractUserIdFromAuthentication(authentication);
             notificationService.deleteNotification(notificationId);
             
             return ResponseEntity.ok(ApiResponse.<Void>builder()
@@ -159,7 +159,7 @@ public class NotificationController {
     @DeleteMapping
     public ResponseEntity<ApiResponse<Void>> deleteAllNotifications(Authentication authentication) {
         try {
-            UUID userId = extractUserIdFromAuthentication(authentication);
+            String userId = extractUserIdFromAuthentication(authentication);
             notificationService.deleteAllNotifications(userId);
             
             return ResponseEntity.ok(ApiResponse.<Void>builder()
@@ -197,7 +197,7 @@ public class NotificationController {
     @PostMapping("/test-realtime")
     public ResponseEntity<ApiResponse<String>> testRealTimeNotification(Authentication authentication) {
         try {
-            UUID userId = extractUserIdFromAuthentication(authentication);
+            String userId = extractUserIdFromAuthentication(authentication);
             
             // Create a test notification
             NotificationRequest testRequest = NotificationRequest.builder()
@@ -227,7 +227,7 @@ public class NotificationController {
     @PostMapping("/test-async")
     public ResponseEntity<ApiResponse<String>> testAsyncNotification(Authentication authentication) {
         try {
-            UUID userId = extractUserIdFromAuthentication(authentication);
+            String userId = extractUserIdFromAuthentication(authentication);
             
             // Create a test notification using CompletableFuture
             NotificationRequest testRequest = NotificationRequest.builder()
@@ -265,7 +265,7 @@ public class NotificationController {
     @PostMapping("/test-websocket")
     public ResponseEntity<ApiResponse<String>> testWebSocketConnection(Authentication authentication) {
         try {
-            UUID userId = extractUserIdFromAuthentication(authentication);
+            String userId = extractUserIdFromAuthentication(authentication);
             
             log.info("Testing WebSocket connection for user: {}", userId);
             
@@ -278,7 +278,7 @@ public class NotificationController {
             
             // Create a simple test notification DTO
             NotificationDto testNotification = NotificationDto.builder()
-                    .notificationId(UUID.randomUUID())
+                    .notificationId(java.util.UUID.randomUUID().toString())
                     .recipientId(userId)
                     .title("WebSocket Test")
                     .message(testMessage)
@@ -310,7 +310,7 @@ public class NotificationController {
         }
     }
 
-    private UUID extractUserIdFromAuthentication(Authentication authentication) {
+    private String extractUserIdFromAuthentication(Authentication authentication) {
         if (authentication == null || authentication.getPrincipal() == null) {
             throw new IllegalArgumentException("Authentication or principal is null");
         }
@@ -333,13 +333,8 @@ public class NotificationController {
                     throw new IllegalArgumentException("Invalid user email: " + principalStr);
                 }
             } else {
-                // It's a UUID string
-                try {
-                    return UUID.fromString(principalStr);
-                } catch (IllegalArgumentException e) {
-                    log.error("Invalid UUID format: {}", principalStr);
-                    throw new IllegalArgumentException("Invalid UUID format: " + principalStr);
-                }
+                // It's a string ID
+                return principalStr;
             }
         } else {
             throw new IllegalArgumentException("Unexpected principal type: " + principal.getClass().getName());

@@ -67,6 +67,7 @@ export class ChatService implements OnDestroy {
   }
 
   sendMessage(conversationId: string, content: string, attachments: File[] = []): Observable<any> {
+    console.log('[ChatService] Sending message:', { conversationId, content, attachments });
     return this.messageService.sendMessage(conversationId, content, attachments);
   }
 

@@ -59,10 +59,8 @@ private uploadAttachments(): Promise<Message> {
         status: 'SENT'
       };
 
-      const messageBlob = new Blob([JSON.stringify(messageData)], {
-        type: 'application/json'
-      });
-      formData.append('message', messageBlob);
+      const messageJson = JSON.stringify(messageData);
+      formData.append('message', messageJson);
 
       this.attachments.forEach(file => {
         formData.append('attachments', file, file.name);
@@ -86,6 +84,8 @@ private uploadAttachments(): Promise<Message> {
             this.cdRef.detectChanges();
           } else if (event.type === HttpEventType.Response) {
             if (event.body?.success && event.body.data) {
+              console.log('Message sent successfully:', event.body.data);
+              console.log('Message attachments:', event.body.data.attachments);
               // Clean up local object URLs after successful upload
               this.cleanupLocalFileUrls();
               return event.body.data;

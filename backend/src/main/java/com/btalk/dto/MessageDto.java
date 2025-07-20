@@ -1,6 +1,7 @@
 package com.btalk.dto;
 
 import com.btalk.constants.MessageType;
+import com.btalk.constants.CallType;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,16 +10,15 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.UUID;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class MessageDto {
-    private UUID messageId;
-    private UUID conversationId;
-    private UUID senderId;
+    private String messageId;
+    private String conversationId;
+    private String senderId;
     private String senderName;
     private String senderAvatar;
     private String content;
@@ -26,4 +26,7 @@ public class MessageDto {
     private LocalDateTime sentAt;
     private String status; // "SENT", "DELIVERED", "SEEN"
     private List<AttachmentDto> attachments;
+    private Integer callDuration;
+    private CallType callType;
+    private String callStatus;
 }

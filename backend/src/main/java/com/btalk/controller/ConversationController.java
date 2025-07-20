@@ -16,7 +16,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 
 @RestController
 @Slf4j
@@ -36,41 +35,48 @@ public class ConversationController {
 
     @PostMapping("/private")
     public ApiResponse<ConversationDto> createPrivateConversation(
-            @RequestParam UUID creatorId,
-            @RequestParam UUID participantId) {
+            @RequestParam String creatorId,
+            @RequestParam String participantId) {
         try {
-            List<UUID> participants = List.of(creatorId, participantId);
+            List<String> participants = List.of(creatorId, participantId);
             
             log.info("Creating private conversation between {} and {}", creatorId, participantId);
             ConversationDto conversation = conversationService.createConversation("", participants, creatorId);
             
+            log.info("Private conversation created successfully: {}", conversation.getConversationId());
+            
             // Notify both participants with updated conversation data
-            for (UUID userId : participants) {
+            for (String userId : participants) {
                 // Ensure this matches what frontend expects
                 log.info("Sending conversation update to userId={}", userId);
                 
                 try {
+                    ApiResponse<Map<String, Object>> response = ApiResponse.success("New conversation created", Map.of(
+                        "eventType", "NEW_CONVERSATION",
+                        "conversation", conversation
+                    ));
+                    
                     messagingTemplate.convertAndSendToUser(
-                        userId.toString(),
+                        userId,
                         "/queue/conversation-updates",
-                        conversation
+                        response
                     );
-                    log.info("Successfully sent conversation update to user {}", userId);
+                    log.info("Successfully sent conversation update to user {}: {}", userId, response);
                 } catch (Exception e) {
-                    log.error("Failed to send conversation update to user {}: {}", userId, e.getMessage());
+                    log.error("Failed to send conversation update to user {}: {}", userId, e.getMessage(), e);
                 }
                 
                 // Send notification count update
                 try {
                     Long unreadCount = notificationService.getUnreadCount(userId);
                     messagingTemplate.convertAndSendToUser(
-                        userId.toString(),
+                        userId,
                         "/queue/unread-count",
                         unreadCount
                     );
                     log.info("Successfully sent unread count update to user {}: {}", userId, unreadCount);
                 } catch (Exception e) {
-                    log.error("Failed to send unread count update to user {}: {}", userId, e.getMessage());
+                    log.error("Failed to send unread count update to user {}: {}", userId, e.getMessage(), e);
                 }
             }
             
@@ -83,12 +89,12 @@ public class ConversationController {
 
     @PostMapping("/group")
     public ApiResponse<ConversationDto> createGroupConversation(
-            @RequestParam UUID creatorId,
+            @RequestParam String creatorId,
             @RequestParam String name,
-            @RequestBody List<UUID> participantIds) {
+            @RequestBody List<String> participantIds) {
         try {
             // Include creator in participants
-            List<UUID> allParticipants = new ArrayList<>(participantIds);
+            List<String> allParticipants = new ArrayList<>(participantIds);
             if (!allParticipants.contains(creatorId)) {
                 allParticipants.add(creatorId);
             }
@@ -96,30 +102,37 @@ public class ConversationController {
             log.info("Creating group conversation '{}' with {} participants", name, allParticipants.size());
             ConversationDto conversation = conversationService.createConversation(name, allParticipants, creatorId);
             
+            log.info("Group conversation created successfully: {}", conversation.getConversationId());
+            
             // Notify all participants
-            for (UUID participantId : allParticipants) {
+            for (String participantId : allParticipants) {
                 try {
+                    ApiResponse<Map<String, Object>> response = ApiResponse.success("New group conversation created", Map.of(
+                        "eventType", "NEW_CONVERSATION",
+                        "conversation", conversation
+                    ));
+                    
                     messagingTemplate.convertAndSendToUser(
-                        participantId.toString(),
+                        participantId,
                         "/queue/conversation-updates",
-                        conversation
+                        response
                     );
-                    log.info("Successfully sent group conversation update to user {}", participantId);
+                    log.info("Successfully sent group conversation update to user {}: {}", participantId, response);
                 } catch (Exception e) {
-                    log.error("Failed to send group conversation update to user {}: {}", participantId, e.getMessage());
+                    log.error("Failed to send group conversation update to user {}: {}", participantId, e.getMessage(), e);
                 }
                 
                 // Send notification count update
                 try {
                     Long unreadCount = notificationService.getUnreadCount(participantId);
                     messagingTemplate.convertAndSendToUser(
-                        participantId.toString(),
+                        participantId,
                         "/queue/unread-count",
                         unreadCount
                     );
                     log.info("Successfully sent unread count update to user {}: {}", participantId, unreadCount);
                 } catch (Exception e) {
-                    log.error("Failed to send unread count update to user {}: {}", participantId, e.getMessage());
+                    log.error("Failed to send unread count update to user {}: {}", participantId, e.getMessage(), e);
                 }
             }
 
@@ -131,7 +144,7 @@ public class ConversationController {
     }
     
     @GetMapping("/user/{userId}")
-    public ApiResponse<List<ConversationDto>> getUserConversations(@PathVariable UUID userId) {
+    public ApiResponse<List<ConversationDto>> getUserConversations(@PathVariable String userId) {
         try {
             List<ConversationDto> conversations = conversationService.getUserConversations(userId);
             return ApiResponse.success("Conversations retrieved successfully", conversations);

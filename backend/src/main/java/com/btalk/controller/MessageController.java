@@ -4,6 +4,7 @@ import com.btalk.dto.*;
 import com.btalk.dto.response.ApiResponse;
 import com.btalk.service.MessageService;
 import com.btalk.utils.FileStorageUtils;
+import com.btalk.repository.AttachmentRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.extern.slf4j.Slf4j;
@@ -26,7 +27,6 @@ import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/messages")
@@ -36,13 +36,16 @@ public class MessageController {
     private final MessageService messageService;
     private final SimpMessagingTemplate messagingTemplate;
     private final FileStorageUtils fileStorageUtils;
+    private final AttachmentRepository attachmentRepository;
     
     public MessageController(MessageService messageService, 
                            SimpMessagingTemplate messagingTemplate,
-                           FileStorageUtils fileStorageUtils) {
+                           FileStorageUtils fileStorageUtils,
+                           AttachmentRepository attachmentRepository) {
         this.messageService = messageService;
         this.messagingTemplate = messagingTemplate;
         this.fileStorageUtils = fileStorageUtils;
+        this.attachmentRepository = attachmentRepository;
     }
 
     // Send a new message
@@ -55,25 +58,48 @@ public class MessageController {
         ObjectMapper objectMapper = new ObjectMapper();
         MessageDto messageDto = objectMapper.readValue(messageJson, MessageDto.class);
         
-        // Process attachments
-        if (attachments != null && !attachments.isEmpty()) {
-            List<AttachmentDto> attachmentDtos = new ArrayList<>();
-            for (MultipartFile file : attachments) {
-                AttachmentDto savedAttachment = fileStorageUtils.storeFile(file);
-                attachmentDtos.add(savedAttachment);
-            }
-            messageDto.setAttachments(attachmentDtos);
-        }
-        
         // Convert MessageDto to MessageRequest
         com.btalk.dto.request.MessageRequest request = com.btalk.dto.request.MessageRequest.builder()
                 .content(messageDto.getContent())
                 .messageType(messageDto.getMessageType())
                 .build();
         
+        // Send message first to get the message ID
         MessageDto savedMessage = messageService.sendMessage(messageDto.getConversationId(), messageDto.getSenderId(), request);
         
-        // Broadcast message
+        // Process attachments and save them to database
+        if (attachments != null && !attachments.isEmpty()) {
+            List<AttachmentDto> attachmentDtos = new ArrayList<>();
+            for (MultipartFile file : attachments) {
+                AttachmentDto savedAttachment = fileStorageUtils.storeFile(file);
+                
+                // Create attachment entity and save to database
+                com.btalk.entity.Attachment attachment = new com.btalk.entity.Attachment();
+                attachment.setMessageId(savedMessage.getMessageId());
+                attachment.setFileUrl(savedAttachment.getFileUrl());
+                attachment.setFileType(savedAttachment.getFileType());
+                attachment.setFileSizeBytes(savedAttachment.getFileSizeBytes());
+                
+                // Save attachment to database
+                com.btalk.entity.Attachment savedAttachmentEntity = attachmentRepository.save(attachment);
+                
+                // Convert to DTO for response
+                AttachmentDto attachmentDto = new AttachmentDto(
+                    savedAttachmentEntity.getAttachmentId(),
+                    savedAttachmentEntity.getMessageId(),
+                    savedAttachmentEntity.getFileUrl(),
+                    savedAttachmentEntity.getFileType(),
+                    savedAttachmentEntity.getFileSizeBytes()
+                );
+                
+                attachmentDtos.add(attachmentDto);
+            }
+            
+            // Update the saved message with attachments
+            savedMessage.setAttachments(attachmentDtos);
+        }
+        
+        // Broadcast message with attachments
         messagingTemplate.convertAndSend(
             "/topic/conversation/" + savedMessage.getConversationId() + "/messages",
             ApiResponse.success("New message received", Map.of(
@@ -87,24 +113,24 @@ public class MessageController {
 
     @GetMapping("/conversation/{conversationId}")
     public ApiResponse<List<MessageDto>> getConversationMessages(
-            @PathVariable UUID conversationId,
-            @RequestParam UUID userId) {
+            @PathVariable String conversationId,
+            @RequestParam String userId) {
         List<MessageDto> messages = messageService.getConversationMessages(conversationId, userId);
         return ApiResponse.success("Messages retrieved successfully", messages);
     }
 
     @GetMapping("/conversation/{conversationId}/unread")
     public ApiResponse<List<MessageDto>> getUnreadMessages(
-            @PathVariable UUID conversationId,
-            @RequestParam UUID userId) {
+            @PathVariable String conversationId,
+            @RequestParam String userId) {
         List<MessageDto> unreadMessages = messageService.getUnreadMessages(conversationId, userId);
         return ApiResponse.success("Unread messages retrieved successfully", unreadMessages);
     }
 
     @GetMapping("/conversation/{conversationId}/new")
     public ApiResponse<List<MessageDto>> getNewMessages(
-            @PathVariable UUID conversationId,
-            @RequestParam UUID userId,
+            @PathVariable String conversationId,
+            @RequestParam String userId,
             @RequestParam LocalDateTime after) {
         List<MessageDto> newMessages = messageService.getNewMessages(conversationId, userId, after);
         return ApiResponse.success("New messages retrieved successfully", newMessages);
@@ -112,8 +138,8 @@ public class MessageController {
 
     @PostMapping("/read/conversation/{conversationId}")
     public ApiResponse<Void> markMessagesAsRead(
-            @PathVariable UUID conversationId,
-            @RequestParam UUID userId) {
+            @PathVariable String conversationId,
+            @RequestParam String userId) {
         messageService.markMessagesAsRead(conversationId, userId);
         // Broadcast read receipt to conversation participants
         messagingTemplate.convertAndSend(
@@ -125,8 +151,8 @@ public class MessageController {
 
     @PostMapping("/read/{messageId}")
     public ApiResponse<Void> markMessageAsRead(
-            @PathVariable UUID messageId,
-            @RequestParam UUID userId) {
+            @PathVariable String messageId,
+            @RequestParam String userId) {
         messageService.markMessageAsRead(messageId, userId);
         // Broadcast single message read receipt
         MessageDto message = messageService.getMessage(messageId);
@@ -139,8 +165,8 @@ public class MessageController {
     
     @GetMapping("/conversation/{conversationId}/page")
     public ApiResponse<Page<MessageDto>> getConversationMessagesPaginated(
-            @PathVariable UUID conversationId,
-            @RequestParam UUID userId,
+            @PathVariable String conversationId,
+            @RequestParam String userId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         Page<MessageDto> messages = messageService.getConversationMessages(conversationId, userId, page, size);
@@ -149,14 +175,13 @@ public class MessageController {
 
     @GetMapping("/conversation/{conversationId}/page/before")
     public ApiResponse<Page<MessageDto>> getMessagesBefore(
-            @PathVariable UUID conversationId,
-            @RequestParam UUID userId,
+            @PathVariable String conversationId,
+            @RequestParam String userId,
             @RequestParam Instant  before,  // Accept as String
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         
     	LocalDateTime localBefore = LocalDateTime.ofInstant(before, ZoneId.systemDefault());
-    	log.info("BOOOO : {}",localBefore.toString());
         Page<MessageDto> messages = messageService.getMessagesBefore(conversationId, userId, localBefore, page, size);
         return ApiResponse.success("Messages retrieved successfully", messages);
     }

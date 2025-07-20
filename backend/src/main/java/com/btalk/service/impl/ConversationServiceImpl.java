@@ -1,15 +1,19 @@
 package com.btalk.service.impl;
 
 import com.btalk.constants.ConversationType;
+
 import com.btalk.dto.ConversationDto;
 import com.btalk.dto.ParticipantDto;
+import com.btalk.dto.MessageDto;
 import com.btalk.entity.Conversation;
 import com.btalk.entity.Participant;
 import com.btalk.entity.User;
-import com.btalk.entity.Notification.NotificationType;
+import com.btalk.entity.Message;
+import com.btalk.constants.NotificationType;
 import com.btalk.repository.ConversationRepository;
 import com.btalk.repository.ParticipantRepository;
 import com.btalk.repository.UserRepository;
+import com.btalk.repository.MessageRepository;
 import com.btalk.service.ConversationService;
 import com.btalk.service.NotificationService;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +22,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -29,10 +32,11 @@ public class ConversationServiceImpl implements ConversationService {
     private final ConversationRepository conversationRepository;
     private final ParticipantRepository participantRepository;
     private final UserRepository userRepository;
+    private final MessageRepository messageRepository;
     private final NotificationService notificationService;
 
     @Override
-    public ConversationDto createConversation(String name, List<UUID> participantIds, UUID creatorId) {
+    public ConversationDto createConversation(String name, List<String> participantIds, String creatorId) {
         try {
             User creator = userRepository.findById(creatorId)
                     .orElseThrow(() -> new RuntimeException("Creator not found"));
@@ -41,13 +45,13 @@ public class ConversationServiceImpl implements ConversationService {
                     .name(name)
                     .creatorId(creator.getUserId())
                     .createdAt(LocalDateTime.now())
-                    .type(participantIds.size() < 2 ? ConversationType.PRIVATE: ConversationType.GROUP)
+                    .type(participantIds.size() == 2 ? ConversationType.PRIVATE: ConversationType.GROUP)
                     .build();
 
             Conversation savedConversation = conversationRepository.save(conversation);
 
             // Add participants
-            for (UUID participantId : participantIds) {
+            for (String participantId : participantIds) {
                 User participant = userRepository.findById(participantId)
                         .orElseThrow(() -> new RuntimeException("Participant not found"));
 
@@ -83,14 +87,14 @@ public class ConversationServiceImpl implements ConversationService {
     }
 
     @Override
-    public ConversationDto getConversation(UUID conversationId) {
+    public ConversationDto getConversation(String conversationId) {
         Conversation conversation = conversationRepository.findById(conversationId)
                 .orElseThrow(() -> new RuntimeException("Conversation not found"));
         return convertToDto(conversation);
     }
 
     @Override
-    public List<ConversationDto> getUserConversations(UUID userId) {
+    public List<ConversationDto> getUserConversations(String userId) {
         List<Conversation> conversations = conversationRepository.findConversationsByUserId(userId);
         return conversations.stream()
                 .map(this::convertToDto)
@@ -98,7 +102,7 @@ public class ConversationServiceImpl implements ConversationService {
     }
 
     @Override
-    public List<ParticipantDto> getConversationParticipants(UUID conversationId) {
+    public List<ParticipantDto> getConversationParticipants(String conversationId) {
         List<Participant> participants = participantRepository.findByConversationId(conversationId);
         return participants.stream()
                 .map(this::convertParticipantToDto)
@@ -106,7 +110,7 @@ public class ConversationServiceImpl implements ConversationService {
     }
 
     @Override
-    public void addParticipant(UUID conversationId, UUID userId, UUID addedBy) {
+    public void addParticipant(String conversationId, String userId, String addedBy) {
         Conversation conversation = conversationRepository.findById(conversationId)
                 .orElseThrow(() -> new RuntimeException("Conversation not found"));
 
@@ -144,7 +148,7 @@ public class ConversationServiceImpl implements ConversationService {
     }
 
     @Override
-    public void removeParticipant(UUID conversationId, UUID userId, UUID removedBy) {
+    public void removeParticipant(String conversationId, String userId, String removedBy) {
         Participant participant = participantRepository.findByConversationIdAndUserId(conversationId, userId);
         if (participant == null) {
             throw new RuntimeException("Participant not found");
@@ -173,7 +177,7 @@ public class ConversationServiceImpl implements ConversationService {
     }
 
     @Override
-    public void updateConversation(UUID conversationId, String name, UUID updatedBy) {
+    public void updateConversation(String conversationId, String name, String updatedBy) {
         Conversation conversation = conversationRepository.findById(conversationId)
                 .orElseThrow(() -> new RuntimeException("Conversation not found"));
 
@@ -203,21 +207,16 @@ public class ConversationServiceImpl implements ConversationService {
     }
 
     @Override
-    public void deleteConversation(UUID conversationId, UUID deletedBy) {
+    public void deleteConversation(String conversationId, String deletedBy) {
         Conversation conversation = conversationRepository.findById(conversationId)
                 .orElseThrow(() -> new RuntimeException("Conversation not found"));
 
-        // Delete all participants first
+        // Get all participants before deleting
         List<Participant> participants = participantRepository.findByConversationId(conversationId);
-        participantRepository.deleteAll(participants);
-
-        // Delete the conversation
-        conversationRepository.delete(conversation);
-
-        // Send notification to all participants
         User deletedByUser = userRepository.findById(deletedBy)
                 .orElseThrow(() -> new RuntimeException("Deleted by user not found"));
 
+        // Send notification to all participants
         for (Participant participant : participants) {
             if (!participant.getUserId().equals(deletedBy)) {
                 String title = "Conversation Deleted";
@@ -233,33 +232,75 @@ public class ConversationServiceImpl implements ConversationService {
                 );
             }
         }
+
+        // Delete all participants
+        participantRepository.deleteAll(participants);
+
+        // Delete the conversation
+        conversationRepository.delete(conversation);
     }
 
     private ConversationDto convertToDto(Conversation conversation) {
         // Get participants for this conversation
-        List<ParticipantDto> participants = getConversationParticipants(conversation.getConversationId());
+        List<Participant> participants = participantRepository.findByConversationId(conversation.getConversationId());
+        List<ParticipantDto> participantDtos = participants.stream()
+                .map(this::convertParticipantToDto)
+                .collect(Collectors.toList());
+
+        // Get last message
+        MessageDto lastMessage = null;
+        Message lastMessageEntity = messageRepository.findLastMessageByConversationId(conversation.getConversationId());
+        if (lastMessageEntity != null) {
+            lastMessage = convertMessageToDto(lastMessageEntity);
+        }
         
+        // Calculate unread count for the current user (this will be calculated per user)
+        // For now, we'll set it to 0 and let the frontend calculate it based on user context
+        int unreadCount = 0;
+
         return ConversationDto.builder()
                 .conversationId(conversation.getConversationId())
-                .type(conversation.getType())
                 .name(conversation.getName())
+                .type(conversation.getType())
                 .creatorId(conversation.getCreatorId())
                 .createdAt(conversation.getCreatedAt())
-                .participants(participants)
+                .participants(participantDtos)
+                .lastMessage(lastMessage)
+                .unreadCount(unreadCount)
+                .build();
+    }
+
+    private MessageDto convertMessageToDto(Message message) {
+        User sender = userRepository.findById(message.getSenderId())
+                .orElseThrow(() -> new RuntimeException("Sender not found"));
+        
+        return MessageDto.builder()
+                .messageId(message.getMessageId())
+                .conversationId(message.getConversationId())
+                .senderId(message.getSenderId())
+                .senderName(sender.getName())
+                .content(message.getContent())
+                .messageType(message.getMessageType())
+                .status("SENT") // Default status for existing messages
+                .sentAt(message.getSentAt())
+                .attachments(null) // TODO: Add attachments if needed
+                .callDuration(message.getCallDuration())
+                .callType(message.getCallType())
+                .callStatus(message.getCallStatus())
                 .build();
     }
 
     private ParticipantDto convertParticipantToDto(Participant participant) {
         User user = userRepository.findById(participant.getUserId())
                 .orElseThrow(() -> new RuntimeException("User not found"));
-                
+
         return ParticipantDto.builder()
                 .participantId(participant.getParticipantId())
                 .userId(participant.getUserId())
                 .userName(user.getName())
                 .userEmail(user.getEmail())
-                .joinedAt(participant.getJoinedAt())
-                .leftAt(participant.getLeftAt())
+                .conversationId(participant.getConversationId())
+                .joinedAt(participant.getJoinedAt().toString())
                 .build();
     }
 }

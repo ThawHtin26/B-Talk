@@ -28,7 +28,7 @@ public class UserController {
     }
 
     @GetMapping("/batch")
-    public ApiResponse<List<UserDto>> getUsersByIds(@RequestParam List<UUID> ids) {
+    public ApiResponse<List<UserDto>> getUsersByIds(@RequestParam List<String> ids) {
         try {
             List<UserDto> users = userService.getUsersByIds(ids);
             return ApiResponse.success("Users retrieved successfully", users);

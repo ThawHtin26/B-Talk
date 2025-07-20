@@ -90,7 +90,12 @@ export class MessageService {
       .pipe(
         tap((response) => {
           if (response.success && response.data) {
-            this.chatState.updateMessagesState(conversationId, response.data.content);
+            // Convert string dates to Date objects
+            const messagesWithDates = response.data.content.map(message => ({
+              ...message,
+              sentAt: new Date(message.sentAt)
+            }));
+            this.chatState.updateMessagesState(conversationId, messagesWithDates);
           }
         }),
         catchError((error) => this.handleError('Failed to load messages', error))
@@ -114,7 +119,12 @@ export class MessageService {
         tap((response) => {
           if (response.success && response.data) {
             console.log("Bla Bla is ",response);
-            this.chatState.prependMessages(conversationId, response.data.content);
+            // Convert string dates to Date objects
+            const messagesWithDates = response.data.content.map(message => ({
+              ...message,
+              sentAt: new Date(message.sentAt)
+            }));
+            this.chatState.prependMessages(conversationId, messagesWithDates);
           }
         }),
         catchError((error) => this.handleError('Failed to load more messages', error))
@@ -133,7 +143,12 @@ export class MessageService {
       .pipe(
         tap((response) => {
           if (response.success && response.data) {
-            this.chatState.updateMessagesState(conversationId, response.data);
+            // Convert string dates to Date objects
+            const messagesWithDates = response.data.map(message => ({
+              ...message,
+              sentAt: new Date(message.sentAt)
+            }));
+            this.chatState.updateMessagesState(conversationId, messagesWithDates);
           }
         }),
         catchError((error) => this.handleError('Failed to load messages', error))

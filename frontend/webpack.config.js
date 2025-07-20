@@ -17,6 +17,16 @@ module.exports = {
       "tls": false
     }
   },
+  module: {
+    rules: [
+      {
+        test: /\.m?js$/,
+        resolve: {
+          fullySpecified: false
+        }
+      }
+    ]
+  },
   plugins: [
     new webpack.ProvidePlugin({
       Buffer: ['buffer', 'Buffer'],

@@ -161,4 +161,27 @@ export class ConversationListComponent implements OnInit, OnDestroy {
   getCurrentUserId(): string {
     return this.authService.getCurrentUser()?.userId || '';
   }
+
+  startVideoCall(conversation: Conversation): void {
+    console.log('Starting video call for conversation:', conversation);
+    
+    // Find the other participant for private conversations
+    if (conversation.type === 'PRIVATE' && conversation.participants) {
+      const currentUser = this.authService.getCurrentUser();
+      const otherParticipant = conversation.participants.find(
+        p => p.userId !== currentUser?.userId
+      );
+      
+      if (otherParticipant) {
+        // Emit an event or call a service to start video call
+        console.log('Initiating video call with:', otherParticipant);
+        // You can implement the actual video call logic here
+        // For now, we'll just log the action
+      } else {
+        console.error('Could not find other participant for video call');
+      }
+    } else {
+      console.log('Video calls are only available for private conversations');
+    }
+  }
 }

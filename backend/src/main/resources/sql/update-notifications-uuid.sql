@@ -1,6 +1,11 @@
--- Fix notifications table schema for MySQL
--- Drop the existing table if it exists
-DROP TABLE IF EXISTS notifications;
+-- Update notifications table to use VARCHAR(36) for UUID fields
+-- This migration handles the transition from BINARY(16) to VARCHAR(36)
+
+-- First, create a backup of the existing data
+CREATE TABLE notifications_backup AS SELECT * FROM notifications;
+
+-- Drop the existing table
+DROP TABLE notifications;
 
 -- Create the notifications table with proper schema for MySQL
 CREATE TABLE notifications (
@@ -26,4 +31,8 @@ CREATE INDEX idx_notifications_sender_id ON notifications(sender_id);
 CREATE INDEX idx_notifications_created_at ON notifications(created_at);
 CREATE INDEX idx_notifications_is_read ON notifications(is_read);
 CREATE INDEX idx_notifications_is_deleted ON notifications(is_deleted);
-CREATE INDEX idx_notifications_type ON notifications(type); 
+CREATE INDEX idx_notifications_type ON notifications(type);
+
+-- Note: If you need to restore data from the backup, you would need to convert
+-- the BINARY(16) data to VARCHAR(36) format. This is typically done by
+-- converting the binary data to hex string and then to UUID format. 

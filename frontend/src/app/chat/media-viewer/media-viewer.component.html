@@ -2,30 +2,45 @@
   <!-- Header -->
   <div class="media-viewer-header">
     <span class="filename">{{ data.fileName }}</span>
-    <button mat-icon-button (click)="close()" aria-label="Close media viewer">
+    <button mat-icon-button (click)="close()" aria-label="Close media viewer" class="close-btn">
       <mat-icon>close</mat-icon>
     </button>
   </div>
 
   <!-- Media Content -->
   <div class="media-content">
-    <ng-container *ngIf="data.mediaType?.startsWith('image/')">
-      <img [src]="data.mediaUrl" class="media-element" alt="Media content" />
+    <ng-container *ngIf="data.fileType?.startsWith('image/')">
+      <img [src]="safeUrl" class="media-element" alt="Image content" />
     </ng-container>
 
-    <ng-container *ngIf="data.mediaType?.startsWith('video/')">
+    <ng-container *ngIf="data.fileType?.startsWith('video/')">
       <video controls autoplay class="media-element">
-        <source [src]="data.mediaUrl" [type]="data.mediaType" />
+        <source [src]="safeUrl" [type]="data.fileType" />
         Your browser does not support the video tag.
       </video>
+    </ng-container>
+
+    <ng-container *ngIf="data.fileType?.startsWith('audio/')">
+      <audio controls autoplay class="media-element">
+        <source [src]="safeUrl" [type]="data.fileType" />
+        Your browser does not support the audio tag.
+      </audio>
+    </ng-container>
+
+    <ng-container *ngIf="!data.fileType?.startsWith('image/') && !data.fileType?.startsWith('video/') && !data.fileType?.startsWith('audio/')">
+      <div class="unsupported-file">
+        <mat-icon class="file-icon">insert_drive_file</mat-icon>
+        <p>File type not supported for preview</p>
+        <p class="file-info">{{ data.fileName }}</p>
+      </div>
     </ng-container>
   </div>
 
   <!-- Footer -->
   <div class="media-viewer-footer">
-    <a mat-button [href]="data.mediaUrl" [attr.download]="data.fileName" class="download-btn">
+    <button mat-raised-button color="primary" (click)="download()" class="download-btn">
       <mat-icon>download</mat-icon>
       Download
-    </a>
+    </button>
   </div>
 </div>

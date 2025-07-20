@@ -9,7 +9,13 @@
   <div class="flex-1 flex flex-col">
     <div class="flex-1 overflow-y-auto p-4">
       <app-message-list *ngIf="!showVideoCall"></app-message-list>
-      <app-video-call *ngIf="showVideoCall" (endCall)="endVideoCall()"></app-video-call>
+      <app-video-call 
+        *ngIf="showVideoCall" 
+        (endCall)="endVideoCall()"
+        [conversationId]="videoCallConversationId"
+        [recipientId]="videoCallRecipientId"
+        [isInitiatingCall]="isInitiatingVideoCall">
+      </app-video-call>
     </div>
     <div class="border-t border-gray-200 p-4 bg-white">
       <app-message-input (videoCall)="startVideoCall()"></app-message-input>

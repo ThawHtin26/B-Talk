@@ -211,10 +211,13 @@ export class MessageListComponent implements OnInit, OnDestroy, AfterViewChecked
       return;
     }
 
+    // Ensure sentAt is a proper Date object
+    const beforeDate = new Date(firstMessage.sentAt);
+    
     this.chatService
       .getMessagesBefore(
         this.activeConversation.conversationId,
-        firstMessage.sentAt,
+        beforeDate,
         this.currentPage,
         this.pageSize
       )
@@ -271,7 +274,7 @@ export class MessageListComponent implements OnInit, OnDestroy, AfterViewChecked
       width: '90vw',
       height: '90vh',
       data: {
-        fileUrl: this.getFullFileUrl(attachment.fileUrl),
+        fileUrl: attachment.fileUrl,
         fileName: this.filenameFromUrlPipe.transform(attachment.fileUrl),
         fileType: attachment.fileType
       }
@@ -279,7 +282,8 @@ export class MessageListComponent implements OnInit, OnDestroy, AfterViewChecked
   }
 
   getSafeFileUrl(fileUrl: string): SafeUrl {
-    return this.sanitizer.bypassSecurityTrustUrl(this.getFullFileUrl(fileUrl));
+    const fullUrl = this.getFullFileUrl(fileUrl);
+    return this.sanitizer.bypassSecurityTrustUrl(fullUrl);
   }
 
   toggleAudioPlayback(attachment: Attachment): void {
@@ -329,6 +333,18 @@ export class MessageListComponent implements OnInit, OnDestroy, AfterViewChecked
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   }
 
+  formatCallDuration(seconds: number): string {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const remainingSeconds = seconds % 60;
+
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+    } else {
+      return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+    }
+  }
+
   showDateSeparator(currentMessage: Message, allMessages: Message[], index?: number): boolean {
     if (index === 0) return true;
     
@@ -342,9 +358,22 @@ export class MessageListComponent implements OnInit, OnDestroy, AfterViewChecked
   }
 
   getFullFileUrl(fileUrl: string): string {
+    // If it's already a full URL, return as is
     if (fileUrl.startsWith('http://') || fileUrl.startsWith('https://')) {
       return fileUrl;
     }
+    
+    // If the URL starts with /api/files/, just add the base URL
+    if (fileUrl.startsWith('/api/files/')) {
+      return `${environment.baseUrl}${fileUrl}`;
+    }
+    
+    // For filenames only (without path), add the full path
+    if (!fileUrl.includes('/')) {
+      return `${environment.apiUrl}/files/${fileUrl}`;
+    }
+    
+    // Default fallback - assume it's a filename and add the path
     return `${environment.apiUrl}/files/${fileUrl}`;
   }
 

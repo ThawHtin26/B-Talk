@@ -1,39 +1,39 @@
 .app-container {
   min-height: 100vh;
+  background: #f8f9fa; // Changed from gradient to light background
   display: flex;
   flex-direction: column;
 }
 
 .app-header {
-  background-color: #ffffff;
-  border-bottom: 1px solid #e5e7eb;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  background: #3b82f6; // Changed to solid blue color
+  border-bottom: 1px solid #2563eb; // Darker blue border
+  padding: 1rem 0;
   position: sticky;
   top: 0;
   z-index: 100;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); // Added subtle shadow
 }
 
 .header-content {
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 1rem;
-  height: 64px;
   display: flex;
-  align-items: center;
   justify-content: space-between;
+  align-items: center;
 }
 
 .logo {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  color: white;
   font-size: 1.5rem;
-  font-weight: 700;
-  color: #1f2937;
-
+  font-weight: bold;
+  
   i {
-    color: #3b82f6;
-    font-size: 1.75rem;
+    font-size: 2rem;
   }
 }
 
@@ -44,31 +44,31 @@
 }
 
 .logout-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  background-color: #ef4444;
-  color: white;
-  border: none;
-  border-radius: 0.375rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-
+  transition: all 0.3s ease;
+  
   &:hover {
-    background-color: #dc2626;
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-1px);
   }
-
+  
   i {
-    font-size: 0.875rem;
+    font-size: 1rem;
   }
 }
 
 .app-main {
   flex: 1;
-  background-color: #f9fafb;
+  display: flex;
+  flex-direction: column;
 }
 
 // Responsive design

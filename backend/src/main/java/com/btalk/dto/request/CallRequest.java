@@ -2,15 +2,24 @@ package com.btalk.dto.request;
 
 import com.btalk.constants.CallStatus;
 import com.btalk.constants.CallType;
+import com.btalk.utils.UuidDeserializer;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import lombok.Data;
-import java.util.UUID;
 
 @Data
 public class CallRequest {
+    @JsonDeserialize(using = UuidDeserializer.class)
     private String callId;
-    private UUID callerId;
-    private UUID recipientId;
-    private UUID conversationId;
+    
+    @JsonDeserialize(using = UuidDeserializer.class)
+    private String callerId;
+    
+    @JsonDeserialize(using = UuidDeserializer.class)
+    private String recipientId;
+    
+    @JsonDeserialize(using = UuidDeserializer.class)
+    private String conversationId;
+    
     private CallStatus status;
     private CallType callType; 
 }

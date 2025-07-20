@@ -3,7 +3,6 @@ package com.btalk.entity;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 @Entity
 @Table(name = "message_reads")
@@ -11,13 +10,13 @@ import java.util.UUID;
 public class MessageRead {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID id;
+    private String id;
     
     @Column(name = "message_id", nullable = false)
-    private UUID messageId;
+    private String messageId;
     
     @Column(name = "user_id", nullable = false)
-    private UUID userId;
+    private String userId;
     
     @Column(nullable = false)
     private LocalDateTime readAt;

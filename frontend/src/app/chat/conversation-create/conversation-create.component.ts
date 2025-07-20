@@ -169,10 +169,25 @@ export class ConversationCreateComponent implements OnInit {
     ).subscribe({
       next: (response: ApiResponse<Conversation>) => {
         if (response.success && response.data) {
-          // this.conversationCreated.emit(response.data);
+          console.log('Conversation created successfully:', response.data);
+          
+          // The conversation will be automatically added to the list via WebSocket
+          // But we can also manually trigger a refresh if needed
+          this.chatService.getConversations().subscribe({
+            next: (refreshResponse) => {
+              if (refreshResponse.success) {
+                console.log('Conversation list refreshed after creation');
+              }
+            },
+            error: (err) => {
+              console.error('Failed to refresh conversation list:', err);
+            }
+          });
+          
           this.closeModal();
         } else {
           this.error = response.message || 'Failed to create conversation';
+          console.error('Conversation creation failed:', response);
         }
       },
       error: (err) => {

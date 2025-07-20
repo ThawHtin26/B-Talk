@@ -10,7 +10,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -23,7 +22,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public UserDto getUserById(UUID userId) {
+    public UserDto getUserById(String userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
         return convertToDto(user);
@@ -37,7 +36,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Transactional
-    public UserDto updateUserProfile(UUID userId, UserDto userDto) {
+    public UserDto updateUserProfile(String userId, UserDto userDto) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
         
@@ -54,7 +53,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Transactional
-    public void updateUserStatus(UUID userId, UserStatus status) {
+    public void updateUserStatus(String userId, UserStatus status) {
         userRepository.updateUserStatus(userId, status);
     }
 
@@ -64,7 +63,7 @@ public class UserServiceImpl implements UserService {
                 .collect(Collectors.toList());
     }
 
-    public List<UserDto> getUsersByIds(List<UUID> userIds) {
+    public List<UserDto> getUsersByIds(List<String> userIds) {
         return userRepository.findAllByIds(userIds).stream()
                 .map(this::convertToDto)
                 .collect(Collectors.toList());

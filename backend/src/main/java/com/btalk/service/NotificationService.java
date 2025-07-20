@@ -1,13 +1,13 @@
 package com.btalk.service;
 
 import com.btalk.dto.NotificationDto;
+
 import com.btalk.dto.NotificationRequest;
-import com.btalk.entity.Notification.NotificationType;
+import com.btalk.constants.NotificationType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import java.util.List;
-import java.util.UUID;
 
 public interface NotificationService {
     
@@ -15,23 +15,23 @@ public interface NotificationService {
     
     void createNotificationAsync(NotificationRequest request);
     
-    Page<NotificationDto> getUserNotifications(UUID userId, Pageable pageable);
+    Page<NotificationDto> getUserNotifications(String userId, Pageable pageable);
     
-    List<NotificationDto> getUnreadNotifications(UUID userId);
+    List<NotificationDto> getUnreadNotifications(String userId);
     
-    Long getUnreadCount(UUID userId);
+    Long getUnreadCount(String userId);
     
-    void markAsRead(UUID notificationId);
+    void markAsRead(String notificationId);
     
-    void markAllAsRead(UUID userId);
+    void markAllAsRead(String userId);
     
-    void deleteNotification(UUID notificationId);
+    void deleteNotification(String notificationId);
     
-    void deleteAllNotifications(UUID userId);
+    void deleteAllNotifications(String userId);
     
-    void sendRealTimeNotification(UUID recipientId, NotificationDto notification);
+    void sendRealTimeNotification(String recipientId, NotificationDto notification);
     
-    void sendNotificationToUser(UUID recipientId, String title, String message, NotificationType type, String data);
+    void sendNotificationToUser(String recipientId, String title, String message, NotificationType type, String data);
     
-    void sendNotificationToUserAsync(UUID recipientId, String title, String message, NotificationType type, UUID senderId, String data);
+    void sendNotificationToUserAsync(String recipientId, String title, String message, NotificationType type, String senderId, String data);
 } 

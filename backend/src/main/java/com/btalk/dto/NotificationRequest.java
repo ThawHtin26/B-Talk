@@ -1,20 +1,20 @@
 package com.btalk.dto;
 
-import com.btalk.entity.Notification.NotificationType;
+
+import com.btalk.constants.NotificationType;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.util.UUID;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class NotificationRequest {
-    private UUID recipientId;
-    private UUID senderId;
+    private String recipientId;
+    private String senderId;
     private String title;
     private String message;
     private NotificationType type;

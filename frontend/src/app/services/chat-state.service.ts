@@ -1,10 +1,13 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { BehaviorSubject, Subject } from 'rxjs';
 import { Conversation } from '../models/conversation';
 import { Message } from '../models/message';
+import { AuthService } from './auth.service';
 
 @Injectable({ providedIn: 'root' })
 export class ChatStateService {
+  private authService = inject(AuthService);
+  
   // State subjects
   private _conversations = new BehaviorSubject<Conversation[]>([]);
   private _activeConversation = new BehaviorSubject<Conversation | null>(null);
@@ -48,8 +51,14 @@ export class ChatStateService {
     const currentState = this._messages.getValue();
     const currentMessages = currentState[conversationId] || [];
 
+    // Ensure all messages have proper Date objects for sentAt
+    const messagesWithDates = newMessages.map(message => ({
+      ...message,
+      sentAt: new Date(message.sentAt)
+    }));
+
     const existingIds = new Set(currentMessages.map(m => m.messageId));
-    const uniqueNewMessages = newMessages.filter(m => !existingIds.has(m.messageId));
+    const uniqueNewMessages = messagesWithDates.filter(m => !existingIds.has(m.messageId));
 
     this._messages.next({
       ...currentState,
@@ -58,15 +67,27 @@ export class ChatStateService {
   }
 
   updateMessagesState(conversationId: string, messages: Message[]): void {
+    // Ensure all messages have proper Date objects for sentAt
+    const messagesWithDates = messages.map(message => ({
+      ...message,
+      sentAt: new Date(message.sentAt)
+    }));
+    
     this._messages.next({
       ...this._messages.value,
-      [conversationId]: messages,
+      [conversationId]: messagesWithDates,
     });
   }
 
   notifyNewMessage(message: Message): void {
-    this._messageUpdates.next(message);
-    this.addMessageToLocalState(message);
+    // Ensure sentAt is a Date object
+    const messageWithDate = {
+      ...message,
+      sentAt: new Date(message.sentAt)
+    };
+    
+    this._messageUpdates.next(messageWithDate);
+    this.addMessageToLocalState(messageWithDate);
   }
 
   notifyNewConversation(conversation: Conversation): void {
@@ -82,22 +103,40 @@ export class ChatStateService {
       const updated = [...currentConversations];
       updated[existingIndex] = { ...updated[existingIndex], ...conversation };
       this._conversations.next(updated);
+      console.log('Updated existing conversation:', conversation.conversationId);
     } else {
-      // Add new conversation at the beginning
-      this._conversations.next([conversation, ...currentConversations]);
+      // Add new conversation at the beginning and ensure it's immediately visible
+      const newConversations = [conversation, ...currentConversations];
+      this._conversations.next(newConversations);
+      console.log('Added new conversation:', conversation.conversationId);
+      
+      // Also set as active conversation if this is the current user's conversation
+      const currentUser = this.authService?.getCurrentUser();
+      if (currentUser && conversation.participants?.some(p => p.userId === currentUser.userId)) {
+        this._activeConversation.next(conversation);
+        console.log('Set as active conversation:', conversation.conversationId);
+      }
     }
     
     // Emit conversation update
     this._conversationUpdates.next(conversation);
+    
+    console.log('New conversation added to state:', conversation.conversationId);
   }
 
   private addMessageToLocalState(message: Message): void {
+    // Ensure sentAt is a Date object
+    const messageWithDate = {
+      ...message,
+      sentAt: new Date(message.sentAt)
+    };
+    
     const current = this._messages.value;
     this._messages.next({
       ...current,
-      [message.conversationId]: [
-        ...(current[message.conversationId] || []),
-        message,
+      [messageWithDate.conversationId]: [
+        ...(current[messageWithDate.conversationId] || []),
+        messageWithDate,
       ],
     });
   }

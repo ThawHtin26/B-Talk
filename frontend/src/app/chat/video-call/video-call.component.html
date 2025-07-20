@@ -1,209 +1,226 @@
-<div class="relative h-full w-full bg-black flex flex-col">
-  <!-- Call header -->
-  <div class="absolute top-0 left-0 right-0 z-10 p-4 bg-gradient-to-b from-black/70 to-transparent">
-    <div class="flex justify-between items-center text-white">
-      <div>
-        <h3 class="text-xl font-semibold">
-          {{ currentCall?.callType === 'GROUP' ? 'Group Call' : 'Video Call' }}
-        </h3>
-        <p class="text-sm">{{ formatCallDuration() }}</p>
-      </div>
-      <div class="flex items-center space-x-2">
-        <span *ngIf="networkQuality" class="flex items-center text-sm">
-          <span class="w-2 h-2 rounded-full mr-1" 
-                [class.bg-green-500]="networkQuality === 'good'"
-                [class.bg-yellow-500]="networkQuality === 'average'"
-                [class.bg-red-500]="networkQuality === 'poor'"></span>
-          {{ networkQuality | titlecase }}
-        </span>
-        <button (click)="toggleSettings()" class="p-2 rounded-full hover:bg-gray-700">
-          <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                  d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-          </svg>
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Video area -->
-  <div class="flex-1 relative overflow-hidden">
-    <!-- Remote video -->
-    <video #remoteVideo autoplay playsinline class="h-full w-full object-cover bg-gray-900"
-           [class.hidden]="!isCallActive"></video>
-    
-    <!-- Remote video placeholder when call not active or video off -->
-    <div *ngIf="!isCallActive || remoteVideoOff" 
-         class="absolute inset-0 flex items-center justify-center bg-gray-900">
-      <div class="text-center text-gray-400">
-        <div class="w-24 h-24 mx-auto mb-4 rounded-full bg-gray-700 flex items-center justify-center">
-          <svg class="h-12 w-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" 
-                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+<div class="fixed inset-0 bg-gray-900 z-50 flex flex-col">
+  <!-- Header -->
+  <div class="bg-black bg-opacity-90 backdrop-blur-sm border-b border-gray-800 p-4">
+    <div class="flex items-center justify-between">
+      <!-- Call Info -->
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+          <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"/>
           </svg>
         </div>
-        <p>{{ remoteVideoOff ? 'Remote video is off' : 'Call not active' }}</p>
+        <div>
+          <h2 class="text-white font-semibold text-lg">Video Call</h2>
+          <p class="text-gray-400 text-sm" *ngIf="isCallActive">
+            {{ formatCallDuration() }}
+          </p>
+          <p class="text-gray-400 text-sm" *ngIf="!isCallActive && isRinging">
+            Ringing...
+          </p>
+        </div>
+      </div>
+
+      <!-- Connection Status -->
+      <div class="flex items-center space-x-2">
+        <div class="flex items-center space-x-1">
+          <div class="w-2 h-2 rounded-full" 
+               [class]="networkQuality === 'good' ? 'bg-green-500' : networkQuality === 'average' ? 'bg-yellow-500' : 'bg-red-500'">
+          </div>
+          <span class="text-gray-400 text-xs">{{ networkQuality }}</span>
+        </div>
       </div>
     </div>
-
-    <!-- Local video -->
-<!-- Modify the local video container -->
-<div class="absolute bottom-20 right-4 w-1/4 max-w-xs rounded-lg overflow-hidden shadow-lg bg-black">
-  <video #localVideo autoplay playsinline muted class="w-full h-full object-cover" 
-         [class.hidden]="isVideoOff"></video>
-  <div *ngIf="isVideoOff" class="absolute inset-0 flex items-center justify-center bg-gray-800">
-    <svg class="h-8 w-8 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" 
-            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-    </svg>
   </div>
-</div>
 
-    <!-- Participants grid (for group calls) -->
-    <div *ngIf="currentCall?.callType === 'GROUP' && isCallActive" class="absolute inset-0 grid grid-cols-2 gap-2 p-2">
-      <!-- Would be dynamically generated in a real implementation -->
-      <div class="bg-gray-800 rounded-lg flex items-center justify-center">
-        <div class="text-center text-gray-400">
-          <div class="w-16 h-16 mx-auto mb-2 rounded-full bg-gray-700 flex items-center justify-center">
-            <svg class="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" 
-                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+  <!-- Main Video Area -->
+  <div class="flex-1 relative overflow-hidden">
+    <!-- Remote Video (Full Screen) -->
+    <div class="absolute inset-0">
+      <video #remoteVideo 
+             class="w-full h-full object-cover bg-gray-900"
+             autoplay 
+             playsinline
+             [class.hidden]="remoteVideoOff">
+      </video>
+      
+      <!-- Remote Video Off Placeholder -->
+      <div *ngIf="remoteVideoOff" 
+           class="w-full h-full flex items-center justify-center bg-gray-800">
+        <div class="text-center">
+          <div class="w-20 h-20 bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg class="w-10 h-10 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M2 6a2 2 0 012-2h6l2 2h6a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/>
             </svg>
           </div>
-          <p class="text-sm">Participant 1</p>
+          <p class="text-gray-400">Camera is off</p>
         </div>
       </div>
-      <!-- More participants... -->
     </div>
-  </div>
 
-  <!-- Call controls -->
-  <div class="absolute bottom-4 left-0 right-0 flex justify-center space-x-4 z-10">
-    <button (click)="toggleMute()" [class.bg-red-500]="isMuted" 
-            class="p-3 rounded-full bg-gray-700/80 text-white hover:bg-gray-600/90 transition-all"
-            [title]="isMuted ? 'Unmute' : 'Mute'">
-      <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path *ngIf="!isMuted" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-              d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path>
-        <path *ngIf="isMuted" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-              d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" 
-              clip-rule="evenodd"></path>
-      </svg>
-    </button>
-    
-    <button (click)="toggleVideo()" [class.bg-red-500]="isVideoOff" 
-            class="p-3 rounded-full bg-gray-700/80 text-white hover:bg-gray-600/90 transition-all"
-            [title]="isVideoOff ? 'Turn on video' : 'Turn off video'">
-      <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path *ngIf="!isVideoOff" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-              d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
-        <path *ngIf="isVideoOff" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-              d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" 
-              clip-rule="evenodd"></path>
-      </svg>
-    </button>
-    
-    <button (click)="toggleScreenShare()" [class.bg-green-500]="isScreenSharing"
-            class="p-3 rounded-full bg-gray-700/80 text-white hover:bg-gray-600/90 transition-all"
-            [title]="isScreenSharing ? 'Stop sharing' : 'Share screen'">
-      <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-              d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
-      </svg>
-    </button>
-    
-    <button (click)="toggleFullscreen()" 
-            class="p-3 rounded-full bg-gray-700/80 text-white hover:bg-gray-600/90 transition-all"
-            title="Toggle fullscreen">
-      <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-              d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path>
-      </svg>
-    </button>
-    
-    <button (click)="hangUp()" 
-            class="p-3 rounded-full bg-red-600 text-white hover:bg-red-700 transition-all"
-            title="End call">
-      <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-              d="M16 8l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M5 3a2 2 0 00-2 2v1c0 8.284 6.716 15 15 15h1a2 2 0 002-2v-3.28a1 1 0 00-.684-.948l-4.493-1.498a1 1 0 00-1.21.502l-1.13 2.257a11.042 11.042 0 01-5.516-5.517l2.257-1.128a1 1 0 00.502-1.21L9.228 3.683A1 1 0 008.279 3H5z"></path>
-      </svg>
-    </button>
-  </div>
+    <!-- Local Video (Picture-in-Picture) -->
+    <div class="absolute top-4 right-4 w-32 h-24 md:w-48 md:h-36 rounded-lg overflow-hidden shadow-2xl border-2 border-white">
+      <video #localVideo 
+             class="w-full h-full object-cover"
+             autoplay 
+             playsinline 
+             muted>
+      </video>
+    </div>
 
-  <!-- Settings panel -->
-  <div *ngIf="showSettings" class="absolute right-4 top-16 bg-gray-800/90 backdrop-blur-sm rounded-lg shadow-xl z-20 p-4 w-64">
-    <h4 class="text-white font-medium mb-3">Call Settings</h4>
-    <div class="space-y-3">
-      <div>
-        <label class="text-gray-300 text-sm block mb-1">Microphone</label>
-        <select class="w-full bg-gray-700 text-white rounded p-2 text-sm" (change)="changeAudioDevice($event)">
-          <option *ngFor="let device of audioDevices" [value]="device.deviceId">
-            {{ device.label || 'Microphone ' + (audioDevices.indexOf(device) + 1) }}
-          </option>
-        </select>
-      </div>
-      <div>
-        <label class="text-gray-300 text-sm block mb-1">Camera</label>
-        <select class="w-full bg-gray-700 text-white rounded p-2 text-sm" (change)="changeVideoDevice($event)">
-          <option *ngFor="let device of videoDevices" [value]="device.deviceId">
-            {{ device.label || 'Camera ' + (videoDevices.indexOf(device) + 1) }}
-          </option>
-        </select>
-      </div>
-      <div class="pt-2 border-t border-gray-700">
-        <button (click)="toggleSettings()" class="text-sm text-blue-400 hover:text-blue-300">
-          Close settings
-        </button>
+    <!-- Call Status Overlay -->
+    <div *ngIf="isRinging" 
+         class="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+      <div class="text-center text-white">
+        <div class="w-24 h-24 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse">
+          <svg class="w-12 h-12" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"/>
+          </svg>
+        </div>
+        <h3 class="text-2xl font-semibold mb-2">Incoming Call</h3>
+        <p class="text-gray-300 mb-6">Someone is calling you...</p>
+        <div class="flex justify-center space-x-4">
+          <button (click)="answerIncomingCall()" 
+                  class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-full font-semibold transition-colors">
+            <svg class="w-5 h-5 inline mr-2" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"/>
+            </svg>
+            Answer
+          </button>
+          <button (click)="rejectIncomingCall()" 
+                  class="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-full font-semibold transition-colors">
+            <svg class="w-5 h-5 inline mr-2" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+            </svg>
+            Decline
+          </button>
+        </div>
       </div>
     </div>
-  </div>
 
-  <!-- Incoming call UI -->
-<div *ngIf="isRinging" class="absolute inset-0 flex items-center justify-center bg-black/80 z-30">
-  <div class="text-center text-white p-6 max-w-sm w-full ringing-animation">
-      <div class="w-24 h-24 mx-auto mb-4 rounded-full bg-gray-700 flex items-center justify-center">
-        <svg class="h-12 w-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" 
-                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+    <!-- Connection Warning -->
+    <div *ngIf="showConnectionWarning" 
+         class="absolute top-4 left-4 bg-yellow-600 text-white px-4 py-2 rounded-lg shadow-lg">
+      <div class="flex items-center space-x-2">
+        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
         </svg>
-      </div>
-      <h3 class="text-2xl font-bold mb-1">Incoming Call</h3>
-      <p class="text-gray-300 mb-6">
-        {{ currentCall?.callType === 'GROUP' ? 'Group video call' : 'Video call' }}
-      </p>
-      <div class="flex justify-center space-x-4">
-        <button (click)="answerIncomingCall()" 
-                class="p-4 rounded-full bg-green-500 text-white hover:bg-green-600 transition-all">
-          <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                  d="M5 13l4 4L19 7"></path>
-          </svg>
-        </button>
-        <button (click)="rejectIncomingCall()" 
-                class="p-4 rounded-full bg-red-500 text-white hover:bg-red-600 transition-all">
-          <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                  d="M6 18L18 6M6 6l12 12"></path>
-          </svg>
-        </button>
+        <span>Poor connection</span>
       </div>
     </div>
   </div>
 
-  <!-- Connection quality warning -->
-  <div *ngIf="showConnectionWarning" class="absolute top-20 left-0 right-0 flex justify-center z-20">
-    <div class="bg-yellow-500/90 text-white px-4 py-2 rounded-lg shadow-lg flex items-center">
-      <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-      </svg>
-      <span>Poor network connection detected</span>
+  <!-- Control Bar -->
+  <div class="bg-black bg-opacity-90 backdrop-blur-sm border-t border-gray-800 p-4">
+    <div class="flex items-center justify-center space-x-4 md:space-x-6">
+      <!-- Mute Button -->
+      <button (click)="toggleMute()" 
+              class="w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center transition-all duration-200"
+              [class]="isMuted ? 'bg-red-600 hover:bg-red-700' : 'bg-gray-700 hover:bg-gray-600'">
+        <svg *ngIf="!isMuted" class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM12.293 7.293a1 1 0 011.414 0L16 8.586l2.293-2.293a1 1 0 111.414 1.414L17.414 10l2.293 2.293a1 1 0 01-1.414 1.414L16 11.414l-2.293 2.293a1 1 0 01-1.414-1.414L14.586 10l-2.293-2.293a1 1 0 010-1.414z" clip-rule="evenodd"/>
+        </svg>
+        <svg *ngIf="isMuted" class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.707.707L4.586 13H2a1 1 0 01-1-1V8a1 1 0 011-1h2.586l3.707-3.707a1 1 0 011.09-.217zM12.293 7.293a1 1 0 011.414 0L16 8.586l2.293-2.293a1 1 0 111.414 1.414L17.414 10l2.293 2.293a1 1 0 01-1.414 1.414L16 11.414l-2.293 2.293a1 1 0 01-1.414-1.414L14.586 10l-2.293-2.293a1 1 0 010-1.414z" clip-rule="evenodd"/>
+        </svg>
+      </button>
+
+      <!-- Video Toggle Button -->
+      <button (click)="toggleVideo()" 
+              class="w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center transition-all duration-200"
+              [class]="isVideoOff ? 'bg-red-600 hover:bg-red-700' : 'bg-gray-700 hover:bg-gray-600'">
+        <svg *ngIf="!isVideoOff" class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M2 6a2 2 0 012-2h6l2 2h6a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/>
+        </svg>
+        <svg *ngIf="isVideoOff" class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+        </svg>
+      </button>
+
+      <!-- Screen Share Button -->
+      <button (click)="toggleScreenShare()" 
+              class="w-12 h-12 md:w-14 md:h-14 rounded-full bg-gray-700 hover:bg-gray-600 flex items-center justify-center transition-all duration-200"
+              [class]="isScreenSharing ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-700 hover:bg-gray-600'">
+        <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"/>
+        </svg>
+      </button>
+
+      <!-- Settings Button -->
+      <button (click)="toggleSettings()" 
+              class="w-12 h-12 md:w-14 md:h-14 rounded-full bg-gray-700 hover:bg-gray-600 flex items-center justify-center transition-all duration-200">
+        <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/>
+        </svg>
+      </button>
+
+      <!-- End Call Button -->
+      <button (click)="hangUp()" 
+              class="w-12 h-12 md:w-14 md:h-14 rounded-full bg-red-600 hover:bg-red-700 flex items-center justify-center transition-all duration-200">
+        <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"/>
+        </svg>
+      </button>
     </div>
   </div>
-  <div *ngIf="errorMessage" class="absolute top-0 left-0 right-0 z-50 bg-red-700 text-white p-4 text-center font-bold">
-    {{ errorMessage }}
+
+  <!-- Settings Panel -->
+  <div *ngIf="showSettings" 
+       class="absolute inset-0 bg-black bg-opacity-75 flex items-center justify-center z-10">
+    <div class="bg-gray-800 rounded-lg p-6 w-full max-w-md mx-4">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-white text-lg font-semibold">Call Settings</h3>
+        <button (click)="toggleSettings()" class="text-gray-400 hover:text-white">
+          <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Audio Device Selection -->
+      <div class="mb-4">
+        <label class="block text-gray-300 text-sm font-medium mb-2">Audio Device</label>
+        <select (change)="changeAudioDevice($event)" 
+                class="w-full bg-gray-700 text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <option *ngFor="let device of audioDevices" 
+                  [value]="device.deviceId"
+                  [selected]="device.deviceId === currentAudioDeviceId">
+            {{ device.label || 'Microphone ' + device.deviceId }}
+          </option>
+        </select>
+      </div>
+
+      <!-- Video Device Selection -->
+      <div class="mb-4">
+        <label class="block text-gray-300 text-sm font-medium mb-2">Video Device</label>
+        <select (change)="changeVideoDevice($event)" 
+                class="w-full bg-gray-700 text-white rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <option *ngFor="let device of videoDevices" 
+                  [value]="device.deviceId"
+                  [selected]="device.deviceId === currentVideoDeviceId">
+            {{ device.label || 'Camera ' + device.deviceId }}
+          </option>
+        </select>
+      </div>
+
+      <!-- Fullscreen Button -->
+      <button (click)="toggleFullscreen()" 
+              class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors">
+        <svg class="w-5 h-5 inline mr-2" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M3 4a1 1 0 011-1h4a1 1 0 010 2H6.414l2.293 2.293a1 1 0 11-1.414 1.414L5 6.414V8a1 1 0 01-2 0V4zm9 1a1 1 0 010-2h4a1 1 0 011 1v4a1 1 0 01-2 0V6.414l-2.293 2.293a1 1 0 11-1.414-1.414L13.586 5H12zm-9 7a1 1 0 012 0v1.586l2.293-2.293a1 1 0 111.414 1.414L6.414 15H8a1 1 0 010 2H4a1 1 0 01-1-1v-4zm13-1a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 010-2h1.586l-2.293-2.293a1 1 0 111.414-1.414L15 13.586V12a1 1 0 011-1z"/>
+        </svg>
+        Toggle Fullscreen
+      </button>
+    </div>
+  </div>
+
+  <!-- Error Message -->
+  <div *ngIf="errorMessage" 
+       class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-red-600 text-white px-6 py-4 rounded-lg shadow-lg z-20">
+    <div class="flex items-center space-x-3">
+      <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+      </svg>
+      <span>{{ errorMessage }}</span>
+    </div>
   </div>
 </div>

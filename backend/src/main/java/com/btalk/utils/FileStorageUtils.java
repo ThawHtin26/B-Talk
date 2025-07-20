@@ -42,10 +42,10 @@ public class FileStorageUtils {
 
         // Build AttachmentDto
         AttachmentDto dto = new AttachmentDto();
-        dto.setFileUrl(baseUrl + "/" + storedFilename);         // Browser-safe
+        dto.setFileUrl(storedFilename);         // Store just the filename
         dto.setFileType(file.getContentType());
         dto.setFileSizeBytes(file.getSize());
-
+        
         return dto;
     }
 

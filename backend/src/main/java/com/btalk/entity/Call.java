@@ -4,7 +4,6 @@ import jakarta.persistence.*;
 import lombok.Data;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 import com.btalk.constants.CallStatus;
 import com.btalk.constants.CallType;
@@ -19,16 +18,22 @@ public class Call {
     private String callId;
 
     @Column(name = "caller_id", nullable = false)
-    private UUID callerId;
+    private String callerId;
+
+    @Column(name = "recipient_id", nullable = true)
+    private String recipientId;
 
     @Column(name = "conversation_id", nullable = false)
-    private UUID conversationId;
+    private String conversationId;
 
     @Column(name = "start_time", nullable = false)
     private LocalDateTime startTime;
 
     @Column(name = "end_time")
     private LocalDateTime endTime;
+
+    @Column(name = "duration")
+    private Integer duration; // Duration in seconds
 
     @Column(name = "call_type", nullable = false)
     @Enumerated(EnumType.STRING)

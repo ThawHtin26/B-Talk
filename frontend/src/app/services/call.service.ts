@@ -15,6 +15,7 @@ export class CallService implements OnDestroy {
   private destroy$ = new Subject<void>();
 
   private incomingCall$ = new Subject<CallRequest>();
+  private callInitiated$ = new Subject<CallRequest>();
   private callAnswered$ = new Subject<CallRequest>();
   private callRejected$ = new Subject<CallRequest>();
   private callEnded$ = new Subject<CallRequest>();
@@ -26,6 +27,7 @@ export class CallService implements OnDestroy {
     private authService: AuthService
   ) {
     this.listenForIncomingCalls();
+    this.listenForCallInitiated();
     this.listenForCallAnswered();
     this.listenForCallRejected();
     this.listenForCallEnded();
@@ -33,10 +35,35 @@ export class CallService implements OnDestroy {
   }
 
   private listenForIncomingCalls(): void {
+    console.log('[CallService] Setting up incoming call listener...');
     this.wsService
       .subscribe<CallRequest>('/user/queue/call/incoming')
       .pipe(takeUntil(this.destroy$))
-      .subscribe(request => this.incomingCall$.next(request));
+      .subscribe({
+        next: (request) => {
+          console.log('[CallService] RECEIVER: Received incoming call:', request);
+          this.incomingCall$.next(request);
+        },
+        error: (error) => {
+          console.error('[CallService] Error in incoming call listener:', error);
+        }
+      });
+  }
+
+  private listenForCallInitiated(): void {
+    console.log('[CallService] Setting up call initiated listener...');
+    this.wsService
+      .subscribe<CallRequest>('/user/queue/call/initiated')
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (request) => {
+          console.log('[CallService] CALLER: Received call initiated confirmation:', request);
+          this.callInitiated$.next(request);
+        },
+        error: (error) => {
+          console.error('[CallService] Error in call initiated listener:', error);
+        }
+      });
   }
 
   private listenForCallAnswered(): void {
@@ -61,21 +88,48 @@ export class CallService implements OnDestroy {
   }
 
   private listenForCallSignals(): void {
+    console.log('[CallService] Setting up call signals listener...');
     this.wsService
       .subscribe<CallSignal>('/user/queue/call/signals')
       .pipe(takeUntil(this.destroy$))
-      .subscribe(signal => this.callSignal$.next(signal));
+      .subscribe({
+        next: (signal) => {
+          console.log('[CallService] Received call signal:', signal);
+          console.log('Signal type:', signal.type);
+          console.log('Caller ID:', signal.callerId);
+          console.log('Recipient ID:', signal.recipientId);
+          this.callSignal$.next(signal);
+        },
+        error: (error) => {
+          console.error('[CallService] Error in call signals listener:', error);
+        }
+      });
   }
 
   listenForGroupCallSignals(conversationId: string): void {
+    console.log('[CallService] Setting up group call signals listener for conversation:', conversationId);
     this.wsService
       .subscribe<CallSignal>(`/topic/call/${conversationId}/signals`)
       .pipe(takeUntil(this.destroy$))
-      .subscribe(signal => this.callSignal$.next(signal));
+      .subscribe({
+        next: (signal) => {
+          console.log('[CallService] Received group call signal:', signal);
+          console.log('Signal type:', signal.type);
+          console.log('Conversation ID:', signal.conversationId);
+          this.callSignal$.next(signal);
+        },
+        error: (error) => {
+          console.error('[CallService] Error in group call signals listener:', error);
+        }
+      });
   }
 
   getIncomingCall$(): Observable<CallRequest> {
     return this.incomingCall$.asObservable();
+  }
+
+  getCallInitiated$(): Observable<CallRequest> {
+    return this.callInitiated$.asObservable();
   }
 
   getCallAnswered$(): Observable<CallRequest> {
@@ -95,14 +149,24 @@ export class CallService implements OnDestroy {
   }
 
   sendSignal(signal: CallSignal): void {
+    console.log('[CallService] Sending signal:', signal);
+    console.log('Signal type:', signal.type);
+    console.log('Caller ID:', signal.callerId);
+    console.log('Recipient ID:', signal.recipientId);
+    console.log('Conversation ID:', signal.conversationId);
+    
     if (!signal.conversationId && !signal.recipientId) {
       console.error('Signal must have either conversationId or recipientId');
       return;
     }
+    
     const route = signal.recipientId
       ? '/app/call/private/signal'
       : '/app/call/group/signal';
+    
+    console.log('Sending to route:', route);
     this.wsService.sendMessage(route, signal);
+    console.log('Signal sent successfully');
   }
 
   initiateCall(request: CallRequest): void {
@@ -110,8 +174,15 @@ export class CallService implements OnDestroy {
       ...request,
       status: CallStatus.RINGING
     };
-    console.log("Bahubali",callRequest);
-    this.http.post(`${environment.apiUrl}/calls/start`, callRequest).subscribe();
+    console.log("[CallService] Initiating call:", callRequest);
+    this.http.post(`${environment.apiUrl}/calls/start`, callRequest).subscribe({
+      next: (response) => {
+        console.log("[CallService] Call initiation successful:", response);
+      },
+      error: (error) => {
+        console.error("[CallService] Call initiation failed:", error);
+      }
+    });
   }
 
   answerCall(request: CallRequest): void {

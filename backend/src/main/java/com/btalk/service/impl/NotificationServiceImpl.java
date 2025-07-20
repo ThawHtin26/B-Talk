@@ -1,10 +1,11 @@
 package com.btalk.service.impl;
 
 import com.btalk.dto.NotificationDto;
+
 import com.btalk.dto.NotificationRequest;
 import com.btalk.entity.Notification;
 import com.btalk.entity.User;
-import com.btalk.entity.Notification.NotificationType;
+import com.btalk.constants.NotificationType;
 import com.btalk.repository.NotificationRepository;
 import com.btalk.repository.UserRepository;
 import com.btalk.service.NotificationService;
@@ -20,7 +21,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
@@ -83,13 +83,13 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
-    public Page<NotificationDto> getUserNotifications(UUID userId, Pageable pageable) {
+    public Page<NotificationDto> getUserNotifications(String userId, Pageable pageable) {
         Page<Notification> notifications = notificationRepository.findByRecipientIdOrderByCreatedAtDesc(userId, pageable);
         return notifications.map(this::convertToDto);
     }
 
     @Override
-    public List<NotificationDto> getUnreadNotifications(UUID userId) {
+    public List<NotificationDto> getUnreadNotifications(String userId) {
         List<Notification> notifications = notificationRepository.findUnreadByRecipientId(userId);
         return notifications.stream()
                 .map(this::convertToDto)
@@ -97,39 +97,39 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
-    public Long getUnreadCount(UUID userId) {
+    public Long getUnreadCount(String userId) {
         return notificationRepository.countUnreadByRecipientId(userId);
     }
 
     @Override
     @Transactional
-    public void markAsRead(UUID notificationId) {
+    public void markAsRead(String notificationId) {
         notificationRepository.markAsRead(notificationId, LocalDateTime.now());
     }
 
     @Override
     @Transactional
-    public void markAllAsRead(UUID userId) {
+    public void markAllAsRead(String userId) {
         notificationRepository.markAllAsRead(userId, LocalDateTime.now());
     }
 
     @Override
     @Transactional
-    public void deleteNotification(UUID notificationId) {
+    public void deleteNotification(String notificationId) {
         notificationRepository.deleteById(notificationId);
     }
 
     @Override
     @Transactional
-    public void deleteAllNotifications(UUID userId) {
+    public void deleteAllNotifications(String userId) {
         notificationRepository.deleteAllByRecipientId(userId);
     }
 
     @Override
-    public void sendRealTimeNotification(UUID recipientId, NotificationDto notification) {
+    public void sendRealTimeNotification(String recipientId, NotificationDto notification) {
         try {
             log.info("Sending real-time notification to user {}: {}", recipientId, notification.getTitle());
-            String destination = "/user/" + recipientId.toString() + "/queue/notifications";
+            String destination = "/user/" + recipientId + "/queue/notifications";
             messagingTemplate.convertAndSend(destination, notification);
             log.info("Successfully sent notification to user {}", recipientId);
             
@@ -140,10 +140,10 @@ public class NotificationServiceImpl implements NotificationService {
         }
     }
 
-    private void sendUnreadCountUpdate(UUID recipientId) {
+    private void sendUnreadCountUpdate(String recipientId) {
         try {
             Long unreadCount = getUnreadCount(recipientId);
-            String destination = "/user/" + recipientId.toString() + "/queue/unread-count";
+            String destination = "/user/" + recipientId + "/queue/unread-count";
             messagingTemplate.convertAndSend(destination, unreadCount);
             log.info("Successfully sent unread count update to user {}: {}", recipientId, unreadCount);
         } catch (Exception e) {
@@ -152,7 +152,7 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
-    public void sendNotificationToUser(UUID recipientId, String title, String message, NotificationType type, String data) {
+    public void sendNotificationToUser(String recipientId, String title, String message, NotificationType type, String data) {
         NotificationRequest request = NotificationRequest.builder()
                 .recipientId(recipientId)
                 .title(title)
@@ -166,7 +166,7 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     @Async("notificationTaskExecutor")
-    public void sendNotificationToUserAsync(UUID recipientId, String title, String message, NotificationType type, UUID senderId, String data) {
+    public void sendNotificationToUserAsync(String recipientId, String title, String message, NotificationType type, String senderId, String data) {
         try {
             NotificationRequest request = NotificationRequest.builder()
                     .recipientId(recipientId)
@@ -200,59 +200,33 @@ public class NotificationServiceImpl implements NotificationService {
                 .build();
     }
 
-    // New methods with CompletableFuture for better async handling
+    // Additional async methods for better performance
+    @Async("notificationTaskExecutor")
     public CompletableFuture<NotificationDto> createNotificationWithCompletableFuture(NotificationRequest request) {
         return CompletableFuture.supplyAsync(() -> {
-            try {
-                return createNotification(request);
-            } catch (Exception e) {
-                log.error("Error creating notification asynchronously: {}", e.getMessage(), e);
-                throw new RuntimeException("Failed to create notification asynchronously", e);
-            }
+            return createNotification(request);
         }, notificationTaskExecutor);
     }
 
-    public CompletableFuture<Void> sendNotificationToUserWithCompletableFuture(UUID recipientId, String title, String message, 
-                                                              NotificationType type, UUID senderId, String data) {
+    @Async("notificationTaskExecutor")
+    public CompletableFuture<Void> sendNotificationToUserWithCompletableFuture(String recipientId, String title, String message, 
+                                                              NotificationType type, String senderId, String data) {
         return CompletableFuture.runAsync(() -> {
-            try {
-                NotificationRequest request = NotificationRequest.builder()
-                        .recipientId(recipientId)
-                        .senderId(senderId)
-                        .title(title)
-                        .message(message)
-                        .type(type)
-                        .data(data)
-                        .build();
-                
-                createNotification(request);
-            } catch (Exception e) {
-                log.error("Error sending async notification to user {}: {}", recipientId, e.getMessage(), e);
-                throw new RuntimeException("Failed to send async notification", e);
-            }
+            sendNotificationToUserAsync(recipientId, title, message, type, senderId, data);
         }, notificationTaskExecutor);
     }
 
-    public CompletableFuture<Void> sendRealTimeNotificationAsync(UUID recipientId, NotificationDto notification) {
+    @Async("notificationTaskExecutor")
+    public CompletableFuture<Void> sendRealTimeNotificationAsync(String recipientId, NotificationDto notification) {
         return CompletableFuture.runAsync(() -> {
-            try {
-                sendRealTimeNotification(recipientId, notification);
-            } catch (Exception e) {
-                log.error("Error sending real-time notification asynchronously to user {}: {}", recipientId, e.getMessage(), e);
-                throw new RuntimeException("Failed to send real-time notification asynchronously", e);
-            }
+            sendRealTimeNotification(recipientId, notification);
         }, notificationTaskExecutor);
     }
 
-    public CompletableFuture<List<NotificationDto>> getUserNotificationsAsync(UUID userId, Pageable pageable) {
+    @Async("notificationTaskExecutor")
+    public CompletableFuture<List<NotificationDto>> getUserNotificationsAsync(String userId, Pageable pageable) {
         return CompletableFuture.supplyAsync(() -> {
-            try {
-                Page<NotificationDto> notifications = getUserNotifications(userId, pageable);
-                return notifications.getContent();
-            } catch (Exception e) {
-                log.error("Error fetching notifications asynchronously: {}", e.getMessage(), e);
-                throw new RuntimeException("Failed to fetch notifications asynchronously", e);
-            }
+            return getUserNotifications(userId, pageable).getContent();
         }, notificationTaskExecutor);
     }
 } 

@@ -8,7 +8,6 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 @Entity
 @Table(name = "participants")
@@ -19,13 +18,13 @@ import java.util.UUID;
 public class Participant {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    private UUID participantId;
+    private String participantId;
 
     @Column(name = "user_id", nullable = false)
-    private UUID userId;
+    private String userId;
 
     @Column(name = "conversation_id", nullable = false)
-    private UUID conversationId;
+    private String conversationId;
 
     @CreationTimestamp
     private LocalDateTime joinedAt;

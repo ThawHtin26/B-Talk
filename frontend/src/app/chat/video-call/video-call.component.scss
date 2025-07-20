@@ -1,9 +1,282 @@
-.ringing-animation {
-  animation: pulse 1s infinite;
+// Custom animations for video call
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.33);
+  }
+  40%, 50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2);
+  }
 }
 
-@keyframes pulse {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-  100% { transform: scale(1); }
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+// Video call specific styles
+.video-call-container {
+  // Ensure full screen coverage
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 50;
+  
+  // Smooth transitions
+  transition: all 0.3s ease;
+  
+  // Prevent text selection
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+// Local video styling
+.local-video-container {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  border: 2px solid white;
+  transition: all 0.3s ease;
+  
+  &:hover {
+    transform: scale(1.05);
+  }
+  
+  // Responsive sizing
+  @media (max-width: 768px) {
+    width: 8rem;
+    height: 6rem;
+  }
+  
+  @media (min-width: 769px) {
+    width: 12rem;
+    height: 9rem;
+  }
+}
+
+// Remote video styling
+.remote-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background-color: #111827;
+  
+  &.hidden {
+    display: none;
+  }
+}
+
+// Control buttons styling
+.control-button {
+  transition: all 0.2s ease;
+  
+  &:hover {
+    transform: scale(1.1);
+  }
+  
+  &:active {
+    transform: scale(0.95);
+  }
+}
+
+// Incoming call animation
+.incoming-call {
+  animation: fade-in 0.5s ease;
+  
+  .ringing-icon {
+    animation: pulse-ring 2s infinite;
+  }
+}
+
+// Settings panel animation
+.settings-panel {
+  animation: slide-up 0.3s ease;
+}
+
+// Connection warning
+.connection-warning {
+  animation: fade-in 0.5s ease;
+}
+
+// Error message styling
+.error-message {
+  animation: fade-in 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+// Responsive design improvements
+@media (max-width: 640px) {
+  .control-bar {
+    padding: 1rem 0.5rem;
+    
+    .control-button {
+      width: 3rem;
+      height: 3rem;
+      
+      svg {
+        width: 1.25rem;
+        height: 1.25rem;
+      }
+    }
+  }
+  
+  .header {
+    padding: 0.75rem;
+    
+    h2 {
+      font-size: 1rem;
+    }
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  .control-bar {
+    .control-button {
+      width: 3.5rem;
+      height: 3.5rem;
+    }
+  }
+}
+
+@media (min-width: 1025px) {
+  .control-bar {
+    .control-button {
+      width: 3.5rem;
+      height: 3.5rem;
+    }
+  }
+}
+
+// Dark mode optimizations
+@media (prefers-color-scheme: dark) {
+  .video-call-container {
+    background-color: #111827;
+  }
+}
+
+// High contrast mode support
+@media (prefers-contrast: high) {
+  .control-button {
+    border: 2px solid currentColor;
+  }
+  
+  .local-video-container {
+    border: 3px solid white;
+  }
+}
+
+// Reduced motion support
+@media (prefers-reduced-motion: reduce) {
+  .control-button,
+  .local-video-container,
+  .incoming-call,
+  .settings-panel,
+  .connection-warning,
+  .error-message {
+    animation: none;
+    transition: none;
+  }
+}
+
+// Focus styles for accessibility
+.control-button:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+// Loading states
+.loading {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+// Video placeholder styling
+.video-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+  
+  .placeholder-icon {
+    opacity: 0.5;
+  }
+}
+
+// Network quality indicator
+.network-indicator {
+  &.good {
+    background-color: #10b981;
+  }
+  
+  &.average {
+    background-color: #f59e0b;
+  }
+  
+  &.poor {
+    background-color: #ef4444;
+  }
+}
+
+// Call duration styling
+.call-duration {
+  font-family: 'Courier New', monospace;
+  font-weight: 600;
+}
+
+// Settings dropdown styling
+.settings-dropdown {
+  backdrop-filter: blur(20px);
+  background: rgba(31, 41, 55, 0.95);
+  border: 1px solid rgba(75, 85, 99, 0.5);
+  
+  select {
+    background: rgba(55, 65, 81, 0.8);
+    border: 1px solid rgba(75, 85, 99, 0.5);
+    
+    &:focus {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+    }
+  }
+}
+
+// Fullscreen optimizations
+:host-context(.fullscreen) {
+  .video-call-container {
+    background-color: #000;
+  }
+  
+  .local-video-container {
+    top: 2rem;
+    right: 2rem;
+  }
+  
+  .control-bar {
+    background: rgba(0, 0, 0, 0.8);
+  }
 }

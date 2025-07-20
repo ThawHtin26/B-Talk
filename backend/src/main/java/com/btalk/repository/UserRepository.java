@@ -11,10 +11,9 @@ import com.btalk.entity.User;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 @Repository
-public interface UserRepository extends JpaRepository<User, UUID> {
+public interface UserRepository extends JpaRepository<User, String> {
     Optional<User> findByEmail(String email);
     boolean existsByEmail(String email);
     Optional<User> findByResetToken(String resetToken);
@@ -24,10 +23,10 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     
     @Modifying
     @Query("UPDATE User u SET u.status = :status WHERE u.userId = :userId")
-    void updateUserStatus(@Param("userId") UUID userId, @Param("status") UserStatus status);
+    void updateUserStatus(@Param("userId") String userId, @Param("status") UserStatus status);
     
     @Query("SELECT u FROM User u WHERE u.userId IN :userIds")
-    List<User> findAllByIds(@Param("userIds") List<UUID> userIds);
+    List<User> findAllByIds(@Param("userIds") List<String> userIds);
     
     @Modifying
     @Query("UPDATE User u SET u.resetToken = :resetToken, u.resetTokenExpiry = :resetTokenExpiry WHERE u.email = :email")

@@ -6,11 +6,13 @@ import com.btalk.entity.Conversation;
 import com.btalk.entity.Message;
 import com.btalk.entity.Participant;
 import com.btalk.entity.User;
-import com.btalk.entity.Notification.NotificationType;
+import com.btalk.entity.Attachment;
+import com.btalk.constants.NotificationType;
 import com.btalk.repository.ConversationRepository;
 import com.btalk.repository.MessageRepository;
 import com.btalk.repository.ParticipantRepository;
 import com.btalk.repository.UserRepository;
+import com.btalk.repository.AttachmentRepository;
 import com.btalk.service.MessageService;
 import com.btalk.service.NotificationService;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +26,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
@@ -38,12 +39,13 @@ public class MessageServiceImpl implements MessageService {
     private final ConversationRepository conversationRepository;
     private final ParticipantRepository participantRepository;
     private final UserRepository userRepository;
+    private final AttachmentRepository attachmentRepository;
     private final SimpMessagingTemplate messagingTemplate;
     private final NotificationService notificationService;
     private final Executor messageTaskExecutor;
 
     @Override
-    public MessageDto sendMessage(UUID conversationId, UUID senderId, MessageRequest request) {
+    public MessageDto sendMessage(String conversationId, String senderId, MessageRequest request) {
         try {
             Conversation conversation = conversationRepository.findById(conversationId)
                     .orElseThrow(() -> new RuntimeException("Conversation not found"));
@@ -73,12 +75,12 @@ public class MessageServiceImpl implements MessageService {
         }
     }
 
-    private void sendMessageToParticipants(UUID conversationId, Message message) {
+    private void sendMessageToParticipants(String conversationId, Message message) {
         String destination = "/topic/conversation/" + conversationId + "/messages";
         messagingTemplate.convertAndSend(destination, convertToDto(message));
     }
 
-    private void sendNotificationsToParticipants(UUID conversationId, UUID senderId, Message message) {
+    private void sendNotificationsToParticipants(String conversationId, String senderId, Message message) {
         try {
             List<Participant> participants = participantRepository.findByConversationId(conversationId);
             
@@ -104,14 +106,14 @@ public class MessageServiceImpl implements MessageService {
     }
 
     @Override
-    public MessageDto getMessage(UUID messageId) {
+    public MessageDto getMessage(String messageId) {
         Message message = messageRepository.findById(messageId)
                 .orElseThrow(() -> new RuntimeException("Message not found"));
         return convertToDto(message);
     }
 
     @Override
-    public List<MessageDto> getConversationMessages(UUID conversationId, UUID userId) {
+    public List<MessageDto> getConversationMessages(String conversationId, String userId) {
         List<Message> messages = messageRepository.findByConversationIdOrderBySentAtDesc(conversationId);
         return messages.stream()
                 .map(this::convertToDto)
@@ -119,7 +121,7 @@ public class MessageServiceImpl implements MessageService {
     }
 
     @Override
-    public List<MessageDto> getUnreadMessages(UUID conversationId, UUID userId) {
+    public List<MessageDto> getUnreadMessages(String conversationId, String userId) {
         List<Message> messages = messageRepository.findUnreadMessages(conversationId, userId);
         return messages.stream()
                 .map(this::convertToDto)
@@ -127,7 +129,7 @@ public class MessageServiceImpl implements MessageService {
     }
 
     @Override
-    public List<MessageDto> getNewMessages(UUID conversationId, UUID userId, LocalDateTime after) {
+    public List<MessageDto> getNewMessages(String conversationId, String userId, LocalDateTime after) {
         List<Message> messages = messageRepository.findUnreadMessagesAfter(conversationId, userId, after);
         return messages.stream()
                 .map(this::convertToDto)
@@ -135,33 +137,33 @@ public class MessageServiceImpl implements MessageService {
     }
 
     @Override
-    public void markMessagesAsRead(UUID conversationId, UUID userId) {
+    public void markMessagesAsRead(String conversationId, String userId) {
         // Implementation for marking all messages as read in a conversation
         log.info("All messages in conversation {} marked as read by user {}", conversationId, userId);
     }
 
     @Override
-    public void markMessageAsRead(UUID messageId, UUID userId) {
+    public void markMessageAsRead(String messageId, String userId) {
         // Implementation for marking message as read
         log.info("Message {} marked as read by user {}", messageId, userId);
     }
 
     @Override
-    public Page<MessageDto> getConversationMessages(UUID conversationId, UUID userId, int page, int size) {
+    public Page<MessageDto> getConversationMessages(String conversationId, String userId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
         Page<Message> messages = messageRepository.findByConversationId(conversationId, pageable);
         return messages.map(this::convertToDto);
     }
 
     @Override
-    public Page<MessageDto> getMessagesBefore(UUID conversationId, UUID userId, LocalDateTime before, int page, int size) {
+    public Page<MessageDto> getMessagesBefore(String conversationId, String userId, LocalDateTime before, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
         Page<Message> messages = messageRepository.findMessagesBefore(conversationId, before, pageable);
         return messages.map(this::convertToDto);
     }
 
     @Override
-    public void deleteMessage(UUID messageId, UUID userId) {
+    public void deleteMessage(String messageId, String userId) {
         Message message = messageRepository.findById(messageId)
                 .orElseThrow(() -> new RuntimeException("Message not found"));
 
@@ -175,7 +177,10 @@ public class MessageServiceImpl implements MessageService {
     private MessageDto convertToDto(Message message) {
         User sender = userRepository.findById(message.getSenderId())
                 .orElseThrow(() -> new RuntimeException("Sender not found"));
-                
+        
+        // Fetch attachments for this message
+        List<Attachment> attachments = attachmentRepository.findByMessageId(message.getMessageId());
+        
         return MessageDto.builder()
                 .messageId(message.getMessageId())
                 .conversationId(message.getConversationId())
@@ -185,53 +190,50 @@ public class MessageServiceImpl implements MessageService {
                 .content(message.getContent())
                 .messageType(message.getMessageType())
                 .sentAt(message.getSentAt())
+                .attachments(attachments.stream()
+                    .map(this::convertAttachmentToDto)
+                    .collect(Collectors.toList()))
+                .callDuration(message.getCallDuration())
+                .callType(message.getCallType())
+                .callStatus(message.getCallStatus())
                 .build();
     }
 
-    // New methods with CompletableFuture for better async handling
-    public CompletableFuture<MessageDto> sendMessageAsync(UUID conversationId, UUID senderId, MessageRequest request) {
+    private com.btalk.dto.AttachmentDto convertAttachmentToDto(Attachment attachment) {
+        return new com.btalk.dto.AttachmentDto(
+            attachment.getAttachmentId(),
+            attachment.getMessageId(),
+            attachment.getFileUrl(),
+            attachment.getFileType(),
+            attachment.getFileSizeBytes()
+        );
+    }
+
+    @Async("messageTaskExecutor")
+    public CompletableFuture<MessageDto> sendMessageAsync(String conversationId, String senderId, MessageRequest request) {
         return CompletableFuture.supplyAsync(() -> {
-            try {
-                MessageDto result = sendMessage(conversationId, senderId, request);
-                return result;
-            } catch (Exception e) {
-                log.error("Error sending message asynchronously to conversation {}: {}", conversationId, e.getMessage(), e);
-                throw new RuntimeException("Failed to send message asynchronously", e);
-            }
+            return sendMessage(conversationId, senderId, request);
         }, messageTaskExecutor);
     }
 
-    public CompletableFuture<List<MessageDto>> getConversationMessagesAsync(UUID conversationId, UUID userId) {
+    @Async("messageTaskExecutor")
+    public CompletableFuture<List<MessageDto>> getConversationMessagesAsync(String conversationId, String userId) {
         return CompletableFuture.supplyAsync(() -> {
-            try {
-                List<MessageDto> messages = getConversationMessages(conversationId, userId);
-                return messages;
-            } catch (Exception e) {
-                log.error("Error fetching messages asynchronously for conversation {}: {}", conversationId, e.getMessage(), e);
-                throw new RuntimeException("Failed to fetch messages asynchronously", e);
-            }
+            return getConversationMessages(conversationId, userId);
         }, messageTaskExecutor);
     }
 
-    public CompletableFuture<Void> markMessagesAsReadAsync(UUID conversationId, UUID userId) {
+    @Async("messageTaskExecutor")
+    public CompletableFuture<Void> markMessagesAsReadAsync(String conversationId, String userId) {
         return CompletableFuture.runAsync(() -> {
-            try {
-                markMessagesAsRead(conversationId, userId);
-            } catch (Exception e) {
-                log.error("Error marking messages as read asynchronously for conversation {}: {}", conversationId, e.getMessage(), e);
-                throw new RuntimeException("Failed to mark messages as read asynchronously", e);
-            }
+            markMessagesAsRead(conversationId, userId);
         }, messageTaskExecutor);
     }
 
-    public CompletableFuture<Void> sendNotificationsToParticipantsAsync(UUID conversationId, UUID senderId, Message message) {
+    @Async("messageTaskExecutor")
+    public CompletableFuture<Void> sendNotificationsToParticipantsAsync(String conversationId, String senderId, Message message) {
         return CompletableFuture.runAsync(() -> {
-            try {
-                sendNotificationsToParticipants(conversationId, senderId, message);
-            } catch (Exception e) {
-                log.error("Error sending notifications asynchronously to participants of conversation {}: {}", conversationId, e.getMessage(), e);
-                throw new RuntimeException("Failed to send notifications asynchronously", e);
-            }
+            sendNotificationsToParticipants(conversationId, senderId, message);
         }, messageTaskExecutor);
     }
 }

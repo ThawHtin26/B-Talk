@@ -246,41 +246,32 @@ export class WebSocketService implements OnDestroy {
   }
 
   private internalSubscribe(destination: string, subject: Subject<any>): void {
-    if (!this.stompClient || !this.stompClient.connected) {
-      console.warn('STOMP client not connected, cannot subscribe to:', destination);
-      // Add to pending subscriptions for later processing
+    if (!this.isWebSocketReady()) {
+      console.log('WebSocket not ready, adding to pending subscriptions:', destination);
       this.pendingSubscriptions.push({ destination, subject });
       return;
     }
 
-    const token = this.getToken();
-    if (!token) {
-      console.warn('No token available, cannot subscribe to:', destination);
-      return;
-    }
-
+    console.log('Subscribing to WebSocket destination:', destination);
+    
     try {
-      console.log('Subscribing to:', destination);
-      const subscription = this.stompClient.subscribe(
-        destination,
-        (msg: StompIMessage) => {
-          try {
-            console.log('Received message from:', destination, msg.body);
-            subject.next(JSON.parse(msg.body));
-          } catch (e) {
-            console.error('WS message parse error:', e);
-            subject.error(e);
-          }
-        },
-        {
-          Authorization: `Bearer ${token}`,
+      const subscription = this.stompClient.subscribe(destination, (message) => {
+        console.log('WebSocket message received from:', destination, 'Body:', message.body);
+        
+        try {
+          const data = JSON.parse(message.body);
+          console.log('Parsed WebSocket message:', data);
+          subject.next(data);
+        } catch (error) {
+          console.error('Error parsing WebSocket message:', error);
+          subject.error(error);
         }
-      );
+      });
 
       this.subscriptions.set(destination, { subject, subscription });
-      console.log('Subscription created for:', destination);
+      console.log('Successfully subscribed to:', destination);
     } catch (error) {
-      console.error('Error creating subscription for:', destination, error);
+      console.error('Error subscribing to WebSocket destination:', destination, error);
       subject.error(error);
     }
   }
