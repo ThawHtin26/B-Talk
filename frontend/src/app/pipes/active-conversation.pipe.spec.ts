@@ -1,8 +1,8 @@
-import { ActiveConversationPipe } from './active-conversation.pipe';
+import { IsActiveConversationPipe } from './active-conversation.pipe';
 
 describe('ActiveConversationPipe', () => {
   it('create an instance', () => {
-    const pipe = new ActiveConversationPipe();
+    const pipe = new IsActiveConversationPipe();
     expect(pipe).toBeTruthy();
   });
 });

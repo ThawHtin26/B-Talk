@@ -12,6 +12,7 @@ import { MessageInputComponent } from '../message-input/message-input.component'
 import { VideoCallComponent } from '../video-call/video-call.component';
 import { ConversationCreateComponent } from '../conversation-create/conversation-create.component';
 import { CallRequest } from '../../models/call.request';
+import { CallType, CallStatus } from '../../models/call.enum';
 
 @Component({
   selector: 'app-chat-container',
@@ -133,16 +134,23 @@ export class ChatContainerComponent implements OnInit, OnDestroy {
   }
 
   startVideoCall(): void {
+    console.log('[ChatContainer] startVideoCall() method called');
     console.log('[ChatContainer] Starting video call...');
+    
     // Get the active conversation to determine recipient
     this.chatService.activeConversation$.pipe(
       takeUntil(this.destroy$)
     ).subscribe(conversation => {
+      console.log('[ChatContainer] Active conversation:', conversation);
+      
       if (conversation) {
         console.log('[ChatContainer] Active conversation:', conversation);
         // For private conversations, find the other participant
         if (conversation.type === 'PRIVATE' && conversation.participants) {
           const currentUser = this.authService.getCurrentUser();
+          console.log('[ChatContainer] Current user:', currentUser);
+          console.log('[ChatContainer] Conversation participants:', conversation.participants);
+          
           const otherParticipant = conversation.participants.find(
             p => p.userId !== currentUser?.userId
           );
@@ -153,6 +161,24 @@ export class ChatContainerComponent implements OnInit, OnDestroy {
             this.videoCallRecipientId = otherParticipant.userId;
             this.isInitiatingVideoCall = true;
             this.showVideoCall = true;
+            
+            // Create call request
+            const callRequest: CallRequest = {
+              conversationId: conversation.conversationId,
+              callerId: currentUser?.userId || '',
+              recipientId: otherParticipant.userId,
+              callType: CallType.PRIVATE,
+              status: CallStatus.RINGING,
+              callId: this.generateCallId()
+            };
+            
+            console.log('[ChatContainer] Call request created:', callRequest);
+            console.log('[ChatContainer] Calling callService.initiateCall()');
+            
+            // Initiate the call through the service
+            this.callService.initiateCall(callRequest);
+            
+            console.log('[ChatContainer] Call initiation request sent');
           } else {
             console.error('[ChatContainer] Could not find other participant for video call');
           }
@@ -160,8 +186,14 @@ export class ChatContainerComponent implements OnInit, OnDestroy {
           // For group calls, we'll need to implement group call logic
           console.log('[ChatContainer] Group video calls not yet implemented');
         }
+      } else {
+        console.error('[ChatContainer] No active conversation found');
       }
     });
+  }
+
+  private generateCallId(): string {
+    return 'call_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
   }
 
   endVideoCall(): void {

@@ -1,7 +1,7 @@
 import {
   Component, EventEmitter, Output, OnDestroy, OnInit,
   ViewChild, ElementRef, ChangeDetectorRef, HostListener,
-  AfterViewInit
+  AfterViewInit, Input
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { CallService } from '../../services/call.service';
@@ -22,6 +22,9 @@ import { environment } from '../../../environments/environment';
   styleUrls: ['./video-call.component.scss'],
 })
 export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
+  @Input() conversationId?: string;
+  @Input() recipientId?: string;
+  @Input() isInitiatingCall = false;
   @Output() endCall = new EventEmitter<void>();
   @ViewChild('localVideo') localVideoRef!: ElementRef<HTMLVideoElement>;
   @ViewChild('remoteVideo') remoteVideoRef!: ElementRef<HTMLVideoElement>;
@@ -76,6 +79,9 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
     this.enumerateDevices();
     this.startConnectionMonitoring();
     this.setupFullscreenListener();
+    
+    // Test WebRTC connection on component initialization
+    this.testWebRTCConnection();
   }
 
   ngOnDestroy(): void {
@@ -86,66 +92,151 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
 
   async ngAfterViewInit() {
     try {
-      this.localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      console.log('[WebRTC] Requesting media permissions...');
+      
+      // First try to get both audio and video
+      this.localStream = await navigator.mediaDevices.getUserMedia({ 
+        video: { 
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        }, 
+        audio: true 
+      });
+      
       if (this.localVideoRef?.nativeElement) {
         this.localVideoRef.nativeElement.srcObject = this.localStream;
+        console.log('[WebRTC] Local media stream set successfully');
       }
     } catch (err) {
       console.error('[WebRTC] Could not access camera/mic:', err);
-      this.handleMediaError(err);
+      
+      // Fallback: try audio only if video fails
+      try {
+        console.log('[WebRTC] Attempting audio-only fallback...');
+        this.localStream = await navigator.mediaDevices.getUserMedia({ 
+          video: false,
+          audio: true 
+        });
+        
+        if (this.localVideoRef?.nativeElement) {
+          this.localVideoRef.nativeElement.srcObject = this.localStream;
+          console.log('[WebRTC] Audio-only stream set successfully');
+        }
+        
+        this.errorMessage = 'Camera access denied. Call will be audio-only.';
+      } catch (audioErr) {
+        console.error('[WebRTC] Could not access audio either:', audioErr);
+        this.errorMessage = 'Microphone and camera access denied. Please check your permissions.';
+        this.handleMediaError(audioErr);
+      }
     }
   }
 
   private initializeAudio(): void {
     this.audioElement = new Audio(this.ringtoneSrc);
     this.audioElement.loop = true;
+    this.audioElement.volume = 0.7; // Set volume to 70%
+    
+    // Preload the audio
+    this.audioElement.load();
+    
+    // Add error handling for audio
+    this.audioElement.onerror = (error) => {
+      console.error('[Audio] Error loading ringtone:', error);
+      // Fallback to a simple beep sound
+      this.createFallbackRingtone();
+    };
+  }
+
+  private createFallbackRingtone(): void {
+    // Create a simple beep sound as fallback
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+    oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.1);
+    
+    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+    
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.1);
   }
 
   private playRingtone(): void {
     if (this.audioElement) {
-      this.audioElement.play().catch(e => console.error('Error playing ringtone:', e));
+      console.log('[Audio] Playing ringtone...');
+      this.audioElement.play().catch(e => {
+        console.error('[Audio] Error playing ringtone:', e);
+        this.createFallbackRingtone();
+      });
     }
   }
 
   private stopRingtone(): void {
     if (this.audioElement) {
+      console.log('[Audio] Stopping ringtone...');
       this.audioElement.pause();
       this.audioElement.currentTime = 0;
     }
   }
 
   private setupWebRTC(): void {
-    this.peerConnection = new RTCPeerConnection({
+    // Enhanced WebRTC configuration for Myanmar ISPs
+    const rtcConfig: RTCConfiguration = {
       iceServers: environment.webrtc.iceServers,
-      iceTransportPolicy: 'all'
-    });
+      iceTransportPolicy: 'all',
+      bundlePolicy: 'max-bundle',
+      rtcpMuxPolicy: 'require',
+      iceCandidatePoolSize: 10
+    };
 
+    this.peerConnection = new RTCPeerConnection(rtcConfig);
+
+    // Enhanced ICE candidate handling
     this.peerConnection.onicecandidate = (event) => {
       if (event.candidate && this.currentCall) {
+        console.log('[WebRTC] Generated ICE candidate:', event.candidate.type);
+        console.log('[WebRTC] Candidate protocol:', event.candidate.protocol);
+        console.log('[WebRTC] Candidate address:', event.candidate.address);
+        
         const user = this.authService.getCurrentUser();
         const callerId = user!.userId;
         
         const signal: CallSignal = {
           conversationId: this.currentCall.conversationId,
           callerId: callerId,
-          recipientId: this.currentCall.recipientId, // Fix: Include recipientId
-          callId: this.currentCall.callId, // Fix: Include callId
+          recipientId: this.currentCall.recipientId,
+          callId: this.currentCall.callId,
           type: SignalType.CANDIDATE,
           payload: event.candidate
         };
         this.callService.sendSignal(signal);
+      } else if (!event.candidate) {
+        console.log('[WebRTC] ICE candidate gathering completed');
       }
     };
 
+    // Enhanced track handling
     this.peerConnection.ontrack = (event) => {
+      console.log('[WebRTC] Received remote track:', event.track.kind);
+      
       if (!event.streams || event.streams.length === 0) {
         if (!this.remoteStream) {
           this.remoteStream = new MediaStream();
         }
         this.remoteStream.addTrack(event.track);
-        this.remoteVideoRef.nativeElement.srcObject = this.remoteStream;
+        if (this.remoteVideoRef?.nativeElement) {
+          this.remoteVideoRef.nativeElement.srcObject = this.remoteStream;
+        }
       } else {
-        this.remoteVideoRef.nativeElement.srcObject = event.streams[0];
+        if (this.remoteVideoRef?.nativeElement) {
+          this.remoteVideoRef.nativeElement.srcObject = event.streams[0];
+        }
         this.remoteStream = event.streams[0];
       }
 
@@ -155,28 +246,53 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
       }
     };
 
+    // Enhanced ICE connection state handling
     this.peerConnection.oniceconnectionstatechange = () => {
       const state = this.peerConnection?.iceConnectionState;
+      console.log('[WebRTC] ICE connection state changed:', state);
+      
       if (state === 'disconnected' || state === 'failed') {
         this.showConnectionWarning = true;
         this.networkQuality = 'poor';
+        console.warn('[WebRTC] Connection issues detected:', state);
+        
         if (state === 'failed') {
+          console.log('[WebRTC] Attempting to restart ICE...');
           this.peerConnection?.restartIce();
         }
       } else if (state === 'connected') {
         this.showConnectionWarning = false;
         this.networkQuality = 'good';
+        console.log('[WebRTC] Connection established successfully');
+      } else if (state === 'checking') {
+        this.networkQuality = 'average';
+        console.log('[WebRTC] Checking connection...');
       }
       this.cdr.detectChanges();
     };
 
+    // Enhanced connection state handling
     this.peerConnection.onconnectionstatechange = () => {
       const state = this.peerConnection?.connectionState;
+      console.log('[WebRTC] Connection state changed:', state);
+      
       if (state === 'connected') {
         this.isRinging = false;
         this.stopRingtone();
+        this.isCallActive = true;
+        console.log('[WebRTC] Call is now active');
+        this.cdr.detectChanges();
+      } else if (state === 'failed') {
+        console.error('[WebRTC] Connection failed');
+        this.errorMessage = 'Connection failed. Please check your internet connection.';
         this.cdr.detectChanges();
       }
+    };
+
+    // Add signaling state change handler
+    this.peerConnection.onsignalingstatechange = () => {
+      const state = this.peerConnection?.signalingState;
+      console.log('[WebRTC] Signaling state changed:', state);
     };
   }
 
@@ -185,8 +301,10 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
     this.callService.getIncomingCall$()
       .pipe(takeUntil(this.destroy$))
       .subscribe((request) => {
+        console.log('[VideoCall] Received incoming call request:', request);
         this.currentCall = request;
         this.isRinging = true;
+        this.isCallActive = false;
         this.playRingtone();
         this.cdr.detectChanges();
 
@@ -195,11 +313,25 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
         }
       });
 
+    // Handle call initiated confirmations (for caller)
+    this.callService.getCallInitiated$()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((request) => {
+        console.log('[VideoCall] Call initiated confirmation received:', request);
+        this.currentCall = request;
+        this.isRinging = true;
+        this.isCallActive = false;
+        this.playRingtone();
+        this.cdr.detectChanges();
+      });
+
     // Handle call answered notifications
     this.callService.getCallAnswered$()
       .pipe(takeUntil(this.destroy$))
       .subscribe(async (request) => {
+        console.log('[VideoCall] Call answered notification received:', request);
         this.isRinging = false;
+        this.stopRingtone();
         this.isCallActive = true;
         if (this.currentCall) {
           this.currentCall.status = CallStatus.ONGOING;
@@ -213,7 +345,9 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
     this.callService.getCallRejected$()
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => {
+        console.log('[VideoCall] Call rejected notification received');
         this.isRinging = false;
+        this.stopRingtone();
         this.cleanup();
         this.cdr.detectChanges();
       });
@@ -222,7 +356,10 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
     this.callService.getCallEnded$()
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => {
+        console.log('[VideoCall] Call ended notification received');
         this.isCallActive = false;
+        this.isRinging = false;
+        this.stopRingtone();
         this.cleanup();
         this.endCall.emit();
         this.cdr.detectChanges();
@@ -352,17 +489,32 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
     this.connectionMonitorTimer = setInterval(() => {
       if (!this.peerConnection) return;
 
-      // Simulate network quality check (in a real app, use actual metrics)
-      const states = this.peerConnection.iceConnectionState;
-      if (states === 'connected') {
+      // Enhanced network quality monitoring for Myanmar ISPs
+      const iceState = this.peerConnection.iceConnectionState;
+      const connectionState = this.peerConnection.connectionState;
+      
+      console.log('[ConnectionMonitor] ICE State:', iceState);
+      console.log('[ConnectionMonitor] Connection State:', connectionState);
+      
+      if (iceState === 'connected' && connectionState === 'connected') {
         this.networkQuality = 'good';
         this.showConnectionWarning = false;
-      } else if (states === 'checking') {
+      } else if (iceState === 'checking' || connectionState === 'connecting') {
         this.networkQuality = 'average';
         this.showConnectionWarning = false;
+      } else if (iceState === 'disconnected' || iceState === 'failed' || connectionState === 'failed') {
+        this.networkQuality = 'poor';
+        this.showConnectionWarning = true;
+        
+        // Attempt to restart ICE for poor connections (common with Myanmar ISPs)
+        if (iceState === 'failed') {
+          console.log('[ConnectionMonitor] Attempting ICE restart due to poor connection...');
+          this.peerConnection.restartIce();
+        }
       }
+      
       this.cdr.detectChanges();
-    }, 5000);
+    }, 3000); // Check every 3 seconds for better responsiveness
   }
 
     private setupFullscreenListener(): void {
@@ -793,5 +945,48 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
     console.error('[MediaError]', errorMessage, error);
     this.errorMessage = errorMessage;
     alert(errorMessage);
+  }
+
+  // Add a method to test WebRTC connectivity
+  async testWebRTCConnection(): Promise<void> {
+    console.log('[WebRTC] Testing connection...');
+    
+    try {
+      // Test basic WebRTC support
+      if (!window.RTCPeerConnection) {
+        throw new Error('WebRTC not supported in this browser');
+      }
+      
+      // Test TURN server connectivity
+      const testConnection = new RTCPeerConnection({
+        iceServers: environment.webrtc.iceServers
+      });
+      
+      // Create a data channel to test connectivity
+      const dataChannel = testConnection.createDataChannel('test');
+      
+      dataChannel.onopen = () => {
+        console.log('[WebRTC] Test connection successful');
+        dataChannel.close();
+        testConnection.close();
+      };
+      
+      dataChannel.onerror = (error) => {
+        console.error('[WebRTC] Test connection failed:', error);
+        testConnection.close();
+      };
+      
+      // Set a timeout for the test
+      setTimeout(() => {
+        if (testConnection.connectionState !== 'connected') {
+          console.warn('[WebRTC] Test connection timeout - may have connectivity issues');
+          testConnection.close();
+        }
+      }, 10000);
+      
+    } catch (error) {
+      console.error('[WebRTC] Connection test failed:', error);
+      this.errorMessage = 'WebRTC connection test failed. Please check your internet connection.';
+    }
   }
 }

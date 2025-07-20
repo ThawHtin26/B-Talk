@@ -30591,3 +30591,137 @@ Caused by: java.nio.channels.ClosedChannelException: null
         users u1_0 
     where
         u1_0.user_id=?
+2025-07-20 20:42:15 [main] INFO  com.btalk.BackendApplicationTests - Starting BackendApplicationTests using Java 21.0.4 with PID 9536 (started by thawhtinaung in C:\Users\thawh\Desktop\B-Talk\backend)
+2025-07-20 20:42:15 [main] INFO  com.btalk.BackendApplicationTests - No active profile set, falling back to 1 default profile: "default"
+2025-07-20 20:42:16 [main] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2025-07-20 20:42:16 [main] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 96 ms. Found 8 JPA repository interfaces.
+2025-07-20 20:42:17 [main] INFO  o.h.jpa.internal.util.LogHelper - HHH000204: Processing PersistenceUnitInfo [name: default]
+2025-07-20 20:42:17 [main] INFO  org.hibernate.Version - HHH000412: Hibernate ORM core version 6.6.18.Final
+2025-07-20 20:42:17 [main] INFO  o.h.c.i.RegionFactoryInitiator - HHH000026: Second-level cache disabled
+2025-07-20 20:42:17 [main] INFO  o.s.o.j.p.SpringPersistenceUnitInfo - No LoadTimeWeaver setup: ignoring JPA class transformer
+2025-07-20 20:42:18 [main] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Starting...
+2025-07-20 20:42:19 [main] INFO  com.zaxxer.hikari.pool.HikariPool - HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@1115be8c
+2025-07-20 20:42:19 [main] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Start completed.
+2025-07-20 20:42:19 [main] WARN  org.hibernate.orm.deprecation - HHH90000025: MySQL8Dialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2025-07-20 20:42:19 [main] WARN  org.hibernate.orm.deprecation - HHH90000026: MySQL8Dialect has been deprecated; use org.hibernate.dialect.MySQLDialect instead
+2025-07-20 20:42:19 [main] INFO  o.hibernate.orm.connections.pooling - HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 8.0
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2025-07-20 20:42:20 [main] INFO  o.h.e.t.j.p.i.JtaPlatformInitiator - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2025-07-20 20:42:21 [main] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Initialized JPA EntityManagerFactory for persistence unit 'default'
+2025-07-20 20:42:22 [main] INFO  o.s.d.j.r.query.QueryEnhancerFactory - Hibernate is in classpath; If applicable, HQL parser will be used.
+2025-07-20 20:42:23 [main] INFO  o.s.s.c.a.a.c.InitializeUserDetailsBeanManagerConfigurer$InitializeUserDetailsManagerConfigurer - Global AuthenticationManager configured with UserDetailsService bean with name userDetailsService
+2025-07-20 20:42:23 [main] WARN  o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2025-07-20 20:42:23 [main] DEBUG o.s.w.s.s.s.WebSocketHandlerMapping - Patterns [/ws/**] in 'stompWebSocketHandlerMapping'
+2025-07-20 20:42:24 [main] DEBUG o.s.w.s.m.WebSocketAnnotationMethodMessageHandler - 
+	c.b.c.AuthController:
+	
+2025-07-20 20:42:24 [main] DEBUG o.s.w.s.m.WebSocketAnnotationMethodMessageHandler - 
+	c.b.c.ChatController:
+	{[MESSAGE],[/chat/{conversationId}/read]}: markMessagesAsRead(String,String)
+	{[MESSAGE],[/chat/{conversationId}/send]}: sendMessage(String,MessageDto)
+2025-07-20 20:42:24 [main] DEBUG o.s.w.s.m.WebSocketAnnotationMethodMessageHandler - 
+	c.b.c.ConversationController:
+	
+2025-07-20 20:42:24 [main] DEBUG o.s.w.s.m.WebSocketAnnotationMethodMessageHandler - 
+	c.b.c.FileUploadController:
+	
+2025-07-20 20:42:24 [main] DEBUG o.s.w.s.m.WebSocketAnnotationMethodMessageHandler - 
+	c.b.c.MessageController:
+	
+2025-07-20 20:42:24 [main] DEBUG o.s.w.s.m.WebSocketAnnotationMethodMessageHandler - 
+	c.b.c.NotificationController:
+	
+2025-07-20 20:42:24 [main] DEBUG o.s.w.s.m.WebSocketAnnotationMethodMessageHandler - 
+	c.b.c.UserController:
+	
+2025-07-20 20:42:24 [main] DEBUG o.s.w.s.m.WebSocketAnnotationMethodMessageHandler - 
+	c.b.c.WebRtcController:
+	{[MESSAGE],[/call/group/signal]}: handleGroupSignal(CallSignal)
+	{[MESSAGE],[/call/status]}: handleCallStatus(CallSignal)
+	{[MESSAGE],[/call/private/signal]}: handlePrivateSignal(CallSignal)
+2025-07-20 20:42:24 [main] DEBUG o.s.w.s.m.WebSocketAnnotationMethodMessageHandler - 
+	o.s.b.a.w.s.e.BasicErrorController:
+	
+2025-07-20 20:42:24 [main] INFO  o.s.m.s.b.SimpleBrokerMessageHandler - Starting...
+2025-07-20 20:42:24 [main] INFO  o.s.m.s.b.SimpleBrokerMessageHandler - BrokerAvailabilityEvent[available=true, SimpleBrokerMessageHandler [org.springframework.messaging.simp.broker.DefaultSubscriptionRegistry@5046b9f]]
+2025-07-20 20:42:24 [main] INFO  o.s.m.s.b.SimpleBrokerMessageHandler - Started.
+2025-07-20 20:42:24 [main] INFO  com.btalk.BackendApplicationTests - Started BackendApplicationTests in 9.724 seconds (process running for 11.043)
+2025-07-20 20:42:25 [SpringApplicationShutdownHook] INFO  o.s.m.s.b.SimpleBrokerMessageHandler - Stopping...
+2025-07-20 20:42:25 [SpringApplicationShutdownHook] INFO  o.s.m.s.b.SimpleBrokerMessageHandler - BrokerAvailabilityEvent[available=false, SimpleBrokerMessageHandler [org.springframework.messaging.simp.broker.DefaultSubscriptionRegistry@5046b9f]]
+2025-07-20 20:42:25 [SpringApplicationShutdownHook] INFO  o.s.m.s.b.SimpleBrokerMessageHandler - Stopped.
+2025-07-20 20:42:25 [SpringApplicationShutdownHook] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Closing JPA EntityManagerFactory for persistence unit 'default'
+2025-07-20 20:42:25 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Shutdown initiated...
+2025-07-20 20:42:25 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Shutdown completed.
+2025-07-20 21:48:01 [main] INFO  com.btalk.BackendApplicationTests - Starting BackendApplicationTests using Java 21.0.4 with PID 23492 (started by thawhtinaung in C:\Users\thawh\Desktop\B-Talk\backend)
+2025-07-20 21:48:01 [main] INFO  com.btalk.BackendApplicationTests - No active profile set, falling back to 1 default profile: "default"
+2025-07-20 21:48:02 [main] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2025-07-20 21:48:02 [main] INFO  o.s.d.r.c.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 100 ms. Found 8 JPA repository interfaces.
+2025-07-20 21:48:03 [main] INFO  o.h.jpa.internal.util.LogHelper - HHH000204: Processing PersistenceUnitInfo [name: default]
+2025-07-20 21:48:03 [main] INFO  org.hibernate.Version - HHH000412: Hibernate ORM core version 6.6.18.Final
+2025-07-20 21:48:03 [main] INFO  o.h.c.i.RegionFactoryInitiator - HHH000026: Second-level cache disabled
+2025-07-20 21:48:03 [main] INFO  o.s.o.j.p.SpringPersistenceUnitInfo - No LoadTimeWeaver setup: ignoring JPA class transformer
+2025-07-20 21:48:04 [main] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Starting...
+2025-07-20 21:48:05 [main] INFO  com.zaxxer.hikari.pool.HikariPool - HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@590dea35
+2025-07-20 21:48:05 [main] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Start completed.
+2025-07-20 21:48:05 [main] WARN  org.hibernate.orm.deprecation - HHH90000025: MySQL8Dialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2025-07-20 21:48:05 [main] WARN  org.hibernate.orm.deprecation - HHH90000026: MySQL8Dialect has been deprecated; use org.hibernate.dialect.MySQLDialect instead
+2025-07-20 21:48:05 [main] INFO  o.hibernate.orm.connections.pooling - HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 8.0
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2025-07-20 21:48:07 [main] INFO  o.h.e.t.j.p.i.JtaPlatformInitiator - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2025-07-20 21:48:07 [main] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Initialized JPA EntityManagerFactory for persistence unit 'default'
+2025-07-20 21:48:08 [main] INFO  o.s.d.j.r.query.QueryEnhancerFactory - Hibernate is in classpath; If applicable, HQL parser will be used.
+2025-07-20 21:48:09 [main] INFO  o.s.s.c.a.a.c.InitializeUserDetailsBeanManagerConfigurer$InitializeUserDetailsManagerConfigurer - Global AuthenticationManager configured with UserDetailsService bean with name userDetailsService
+2025-07-20 21:48:10 [main] WARN  o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2025-07-20 21:48:10 [main] DEBUG o.s.w.s.s.s.WebSocketHandlerMapping - Patterns [/ws/**] in 'stompWebSocketHandlerMapping'
+2025-07-20 21:48:10 [main] DEBUG o.s.w.s.m.WebSocketAnnotationMethodMessageHandler - 
+	c.b.c.AuthController:
+	
+2025-07-20 21:48:10 [main] DEBUG o.s.w.s.m.WebSocketAnnotationMethodMessageHandler - 
+	c.b.c.ChatController:
+	{[MESSAGE],[/chat/{conversationId}/send]}: sendMessage(String,MessageDto)
+	{[MESSAGE],[/chat/{conversationId}/read]}: markMessagesAsRead(String,String)
+2025-07-20 21:48:10 [main] DEBUG o.s.w.s.m.WebSocketAnnotationMethodMessageHandler - 
+	c.b.c.ConversationController:
+	
+2025-07-20 21:48:10 [main] DEBUG o.s.w.s.m.WebSocketAnnotationMethodMessageHandler - 
+	c.b.c.FileUploadController:
+	
+2025-07-20 21:48:10 [main] DEBUG o.s.w.s.m.WebSocketAnnotationMethodMessageHandler - 
+	c.b.c.MessageController:
+	
+2025-07-20 21:48:10 [main] DEBUG o.s.w.s.m.WebSocketAnnotationMethodMessageHandler - 
+	c.b.c.NotificationController:
+	
+2025-07-20 21:48:10 [main] DEBUG o.s.w.s.m.WebSocketAnnotationMethodMessageHandler - 
+	c.b.c.UserController:
+	
+2025-07-20 21:48:10 [main] DEBUG o.s.w.s.m.WebSocketAnnotationMethodMessageHandler - 
+	c.b.c.WebRtcController:
+	{[MESSAGE],[/call/private/signal]}: handlePrivateSignal(CallSignal)
+	{[MESSAGE],[/call/group/signal]}: handleGroupSignal(CallSignal)
+	{[MESSAGE],[/call/status]}: handleCallStatus(CallSignal)
+2025-07-20 21:48:10 [main] DEBUG o.s.w.s.m.WebSocketAnnotationMethodMessageHandler - 
+	o.s.b.a.w.s.e.BasicErrorController:
+	
+2025-07-20 21:48:11 [main] INFO  o.s.m.s.b.SimpleBrokerMessageHandler - Starting...
+2025-07-20 21:48:11 [main] INFO  o.s.m.s.b.SimpleBrokerMessageHandler - BrokerAvailabilityEvent[available=true, SimpleBrokerMessageHandler [org.springframework.messaging.simp.broker.DefaultSubscriptionRegistry@30e4cf5e]]
+2025-07-20 21:48:11 [main] INFO  o.s.m.s.b.SimpleBrokerMessageHandler - Started.
+2025-07-20 21:48:11 [main] INFO  com.btalk.BackendApplicationTests - Started BackendApplicationTests in 10.224 seconds (process running for 11.674)
+2025-07-20 21:48:11 [SpringApplicationShutdownHook] INFO  o.s.m.s.b.SimpleBrokerMessageHandler - Stopping...
+2025-07-20 21:48:11 [SpringApplicationShutdownHook] INFO  o.s.m.s.b.SimpleBrokerMessageHandler - BrokerAvailabilityEvent[available=false, SimpleBrokerMessageHandler [org.springframework.messaging.simp.broker.DefaultSubscriptionRegistry@30e4cf5e]]
+2025-07-20 21:48:11 [SpringApplicationShutdownHook] INFO  o.s.m.s.b.SimpleBrokerMessageHandler - Stopped.
+2025-07-20 21:48:11 [SpringApplicationShutdownHook] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean - Closing JPA EntityManagerFactory for persistence unit 'default'
+2025-07-20 21:48:11 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Shutdown initiated...
+2025-07-20 21:48:11 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Shutdown completed.

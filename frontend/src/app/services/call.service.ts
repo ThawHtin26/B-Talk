@@ -154,6 +154,7 @@ export class CallService implements OnDestroy {
     console.log('Caller ID:', signal.callerId);
     console.log('Recipient ID:', signal.recipientId);
     console.log('Conversation ID:', signal.conversationId);
+    console.log('Call ID:', signal.callId);
     
     if (!signal.conversationId && !signal.recipientId) {
       console.error('Signal must have either conversationId or recipientId');
@@ -175,12 +176,18 @@ export class CallService implements OnDestroy {
       status: CallStatus.RINGING
     };
     console.log("[CallService] Initiating call:", callRequest);
+    console.log("[CallService] API URL:", `${environment.apiUrl}/calls/start`);
+    console.log("[CallService] Making HTTP POST request...");
+    
     this.http.post(`${environment.apiUrl}/calls/start`, callRequest).subscribe({
       next: (response) => {
         console.log("[CallService] Call initiation successful:", response);
       },
       error: (error) => {
         console.error("[CallService] Call initiation failed:", error);
+        console.error("[CallService] Error details:", error.message);
+        console.error("[CallService] Error status:", error.status);
+        console.error("[CallService] Error response:", error.error);
       }
     });
   }

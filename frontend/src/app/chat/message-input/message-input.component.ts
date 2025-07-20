@@ -285,8 +285,24 @@ onFileSelected(event: Event): void {
   }
 
     startVideoCall(): void {
-    if (this.isUploading) return;
+    console.log('[MessageInput] Video call button clicked');
+    console.log('[MessageInput] isUploading:', this.isUploading);
+    
+    if (this.isUploading) {
+      console.log('[MessageInput] Cannot start video call - upload in progress');
+      return;
+    }
+    
+    console.log('[MessageInput] Emitting videoCall event');
     this.videoCall.emit();
+    console.log('[MessageInput] Video call event emitted successfully');
+  }
+
+  testVideoCall(): void {
+    console.log('[MessageInput] TEST: Video call test button clicked');
+    console.log('[MessageInput] TEST: Emitting videoCall event directly');
+    this.videoCall.emit();
+    console.log('[MessageInput] TEST: Video call event emitted successfully');
   }
 
   private handleRecordedAudio(audioBlob: Blob): void {

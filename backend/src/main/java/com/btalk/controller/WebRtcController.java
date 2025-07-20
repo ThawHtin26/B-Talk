@@ -3,7 +3,7 @@ package com.btalk.controller;
 import com.btalk.constants.CallStatus;
 import com.btalk.constants.CallType;
 import com.btalk.constants.SignalType;
-import com.btalk.dto.WebRtcSignal;
+import com.btalk.dto.CallSignal;
 import com.btalk.dto.request.CallRequest;
 import com.btalk.dto.response.ApiResponse;
 import com.btalk.service.CallService;
@@ -82,10 +82,10 @@ public class WebRtcController {
     }
 
     @MessageMapping("/call/private/signal")
-    public void handlePrivateSignal(@Payload WebRtcSignal signal) {
+    public void handlePrivateSignal(@Payload CallSignal signal) {
         try {
-            logger.debug("Received private signal: type={}, callerId={}, recipientId={}", 
-                signal.getType(), signal.getCallerId(), signal.getRecipientId());
+            logger.info("Received private signal: type={}, callerId={}, recipientId={}, callId={}", 
+                signal.getType(), signal.getCallerId(), signal.getRecipientId(), signal.getCallId());
             
             if (signal.getRecipientId() == null) {
                 logger.warn("Received private signal without recipient ID");
@@ -98,23 +98,23 @@ public class WebRtcController {
                 return;
             }
             
-            logger.debug("Forwarding private signal to user {}", signal.getRecipientId());
+            logger.info("Forwarding private signal to user {} for call {}", signal.getRecipientId(), signal.getCallId());
             messagingTemplate.convertAndSend(
                 "/user/" + signal.getRecipientId() + "/queue/call/signals",
                 signal
             );
             
-            logger.debug("Private signal forwarded successfully");
+            logger.info("Private signal forwarded successfully");
         } catch (Exception e) {
             logger.error("Error handling private signal", e);
         }
     }
 
     @MessageMapping("/call/group/signal")
-    public void handleGroupSignal(@Payload WebRtcSignal signal) {
+    public void handleGroupSignal(@Payload CallSignal signal) {
         try {
-            logger.debug("Received group signal: type={}, conversationId={}", 
-                signal.getType(), signal.getConversationId());
+            logger.info("Received group signal: type={}, conversationId={}, callId={}", 
+                signal.getType(), signal.getConversationId(), signal.getCallId());
             
             if (signal.getConversationId() == null) {
                 logger.warn("Received group signal without conversation ID");
@@ -127,13 +127,13 @@ public class WebRtcController {
                 return;
             }
             
-            logger.debug("Broadcasting group signal to conversation {}", signal.getConversationId());
+            logger.info("Broadcasting group signal to conversation {} for call {}", signal.getConversationId(), signal.getCallId());
             messagingTemplate.convertAndSend(
                 "/topic/call/" + signal.getConversationId() + "/signals",
                 signal
             );
             
-            logger.debug("Group signal broadcasted successfully");
+            logger.info("Group signal broadcasted successfully");
         } catch (Exception e) {
             logger.error("Error handling group signal", e);
         }
@@ -141,26 +141,29 @@ public class WebRtcController {
 
     // Additional handler for call status signals
     @MessageMapping("/call/status")
-    public void handleCallStatus(@Payload CallRequest request) {
+    public void handleCallStatus(@Payload CallSignal signal) {
         try {
-            logger.info("Received call status update: {}", request);
+            logger.info("Received call status signal: {}", signal);
             
             // Handle different call status updates
-            switch (request.getStatus()) {
+            switch (signal.getType()) {
                 case RINGING:
-                    logger.debug("Call ringing: {}", request.getCallId());
+                    logger.debug("Call ringing: {}", signal.getCallerId());
                     break;
-                case ONGOING:
-                    logger.debug("Call ongoing: {}", request.getCallId());
+                case OFFER:
+                    logger.debug("Call offer: {}", signal.getCallerId());
                     break;
-                case ENDED:
-                    logger.debug("Call ended: {}", request.getCallId());
+                case ANSWER:
+                    logger.debug("Call answer: {}", signal.getCallerId());
                     break;
-                case REJECTED:
-                    logger.debug("Call rejected: {}", request.getCallId());
+                case CANDIDATE:
+                    logger.debug("Call candidate: {}", signal.getCallerId());
+                    break;
+                case HANGUP:
+                    logger.debug("Call hangup: {}", signal.getCallerId());
                     break;
                 default:
-                    logger.warn("Unknown call status: {}", request.getStatus());
+                    logger.warn("Unknown signal type: {}", signal.getType());
             }
         } catch (Exception e) {
             logger.error("Error handling call status", e);

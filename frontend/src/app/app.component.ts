@@ -12,6 +12,7 @@ import { NotificationBellComponent } from './components/notification-bell/notifi
   styleUrls: ['./app.component.scss']
 })
 export class AppComponent implements OnInit {
+  title = 'frontend';
   isAuthenticated = false;
 
   constructor(private authService: AuthService) {}
