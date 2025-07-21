@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, OnDestroy } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ChatService } from '../../services/chat.service';
 import { Conversation } from '../../models/conversation';
@@ -10,6 +10,8 @@ import { TruncatePipe } from '../../pipes/truncate.pipe';
 import { AuthService } from '../../services/auth.service';
 import { IsActiveConversationPipe } from '../../pipes/active-conversation.pipe';
 import { ChatStateService } from '../../services/chat-state.service';
+import { NotificationBellComponent } from '../../components/notification-bell/notification-bell.component';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-conversation-list',
@@ -20,6 +22,7 @@ import { ChatStateService } from '../../services/chat-state.service';
     FormsModule,
     ConversationCreateComponent,
     IsActiveConversationPipe,
+    NotificationBellComponent,
   ],
   templateUrl: './conversation-list.component.html',
   styleUrls: ['./conversation-list.component.scss'],
@@ -28,7 +31,10 @@ export class ConversationListComponent implements OnInit, OnDestroy {
   public chatService = inject(ChatService);
   public authService = inject(AuthService);
   private chatSateService = inject(ChatStateService);
+  private router = inject(Router);
   private subscriptions = new Subscription();
+
+  @Output() conversationSelected = new EventEmitter<void>();
 
   searchTerm = '';
   isLoading = false;
@@ -99,6 +105,12 @@ export class ConversationListComponent implements OnInit, OnDestroy {
       return;
     }
     this.chatService.setActiveConversation(conversation);
+    this.conversationSelected.emit();
+  }
+
+  logout(): void {
+    this.authService.logout();
+    this.router.navigate(['/login']);
   }
 
   getConversationAvatar(conv: Conversation): string {

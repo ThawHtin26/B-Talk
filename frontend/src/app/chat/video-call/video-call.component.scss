@@ -32,6 +32,56 @@
   }
 }
 
+/* Custom animations for calling and ringing states */
+@keyframes ripple {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+@keyframes pulse-slow {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.animate-ripple {
+  animation: ripple 2s infinite;
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 2s ease-in-out infinite;
+}
+
+/* Enhanced ping animation for calling state */
+@keyframes ping-enhanced {
+  0% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  75%, 100% {
+    transform: scale(1.8);
+    opacity: 0;
+  }
+}
+
+.animate-ping-enhanced {
+  animation: ping-enhanced 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+/* Smooth transitions for video elements */
+video {
+  transition: all 0.3s ease-in-out;
+}
+
 // Video call specific styles
 .video-call-container {
   // Ensure full screen coverage
@@ -278,5 +328,29 @@
   
   .control-bar {
     background: rgba(0, 0, 0, 0.8);
+  }
+}
+
+/* Better mobile responsiveness for video call controls */
+@media (max-width: 768px) {
+  .video-controls {
+    padding: 1rem;
+  }
+  
+  .control-button {
+    width: 3rem;
+    height: 3rem;
+  }
+  
+  .overlay-content {
+    padding: 1rem;
+  }
+  
+  .overlay-title {
+    font-size: 1.5rem;
+  }
+  
+  .overlay-description {
+    font-size: 0.875rem;
   }
 }

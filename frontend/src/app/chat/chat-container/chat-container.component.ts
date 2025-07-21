@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, OnDestroy } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Subject, Subscription } from 'rxjs';
 import { filter, takeUntil } from 'rxjs/operators';
@@ -13,6 +13,7 @@ import { VideoCallComponent } from '../video-call/video-call.component';
 import { ConversationCreateComponent } from '../conversation-create/conversation-create.component';
 import { CallRequest } from '../../models/call.request';
 import { CallType, CallStatus } from '../../models/call.enum';
+import { Conversation } from '../../models/conversation';
 
 @Component({
   selector: 'app-chat-container',
@@ -29,7 +30,7 @@ import { CallType, CallStatus } from '../../models/call.enum';
   styleUrls: ['./chat-container.component.scss']
 })
 export class ChatContainerComponent implements OnInit, OnDestroy {
-  private chatService = inject(ChatService);
+  public chatService = inject(ChatService);
   private authService = inject(AuthService);
   private callService = inject(CallService);
   private webSocketService = inject(WebSocketService);
@@ -41,13 +42,25 @@ export class ChatContainerComponent implements OnInit, OnDestroy {
   activeConversationId!: string;
   private currentUserId: string | null = null;
   incomingCall: CallRequest | null = null;
+  private activeConversation: Conversation | null = null;
+  
+  // Mobile view state management
+  currentView: 'conversations' | 'messages' = 'conversations';
+  private isDesktop = false;
   
   // Video call parameters
   videoCallConversationId?: string;
   videoCallRecipientId?: string;
   isInitiatingVideoCall = false;
 
+  @HostListener('window:resize', ['$event'])
+  onResize(event: any) {
+    this.updateDesktopView();
+  }
+
   ngOnInit(): void {
+    this.updateDesktopView();
+    
     const user = this.authService.getCurrentUser();
     this.currentUserId = user?.userId || null;
 
@@ -67,12 +80,16 @@ export class ChatContainerComponent implements OnInit, OnDestroy {
 
     this.subscriptions.add(
       this.chatService.activeConversation$.pipe(
-        filter(conv => conv !== null),
         takeUntil(this.destroy$)
       ).subscribe(conv => {
+        this.activeConversation = conv;
         if (conv) {
           this.activeConversationId = conv.conversationId;
           this.loadMessages(conv.conversationId);
+          // Switch to messages view when conversation is selected on mobile
+          if (!this.isDesktop) {
+            this.currentView = 'messages';
+          }
           // Only reset video call state if no active call is ongoing
           if (!this.callService.isCallActive()) {
             this.endVideoCall();
@@ -135,6 +152,59 @@ export class ChatContainerComponent implements OnInit, OnDestroy {
         this.endVideoCall();
       })
     );
+  }
+
+  private updateDesktopView(): void {
+    this.isDesktop = window.innerWidth >= 1024; // lg breakpoint
+    if (this.isDesktop) {
+      this.currentView = 'messages'; // Always show messages view on desktop
+    }
+  }
+
+  // Mobile view navigation methods
+  showConversations(): void {
+    if (!this.isDesktop) {
+      this.currentView = 'conversations';
+    }
+  }
+
+  showMessages(): void {
+    this.currentView = 'messages';
+  }
+
+  // Helper methods for template
+  isDesktopView(): boolean {
+    return this.isDesktop;
+  }
+
+  hasActiveConversation(): boolean {
+    return !!this.activeConversationId;
+  }
+
+  getActiveConversationName(): string {
+    if (!this.activeConversation) return 'Chat';
+    
+    if (this.activeConversation.type === 'GROUP' && this.activeConversation.name) {
+      return this.activeConversation.name;
+    }
+    
+    // For private conversations, show the other participant's name
+    const currentUserId = this.authService.getCurrentUser()?.userId;
+    if (this.activeConversation.participants && Array.isArray(this.activeConversation.participants)) {
+      const otherParticipant = this.activeConversation.participants.find(
+        (p: any) => p?.userId !== currentUserId
+      );
+      
+      if (otherParticipant) {
+        return otherParticipant.userName || 'Unknown user';
+      }
+    }
+    
+    return 'Chat';
+  }
+
+  canStartVideoCall(): boolean {
+    return (this.activeConversation as Conversation)?.type === 'PRIVATE' && !this.showVideoCall;
   }
 
   private initializeWebSocket(): void {

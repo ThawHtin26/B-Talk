@@ -14,8 +14,11 @@
           <p class="text-gray-400 text-sm" *ngIf="isCallActive">
             {{ formatCallDuration() }}
           </p>
-          <p class="text-gray-400 text-sm" *ngIf="!isCallActive && isRinging">
-            Ringing...
+          <p class="text-gray-400 text-sm" *ngIf="!isCallActive && isRinging && !isInitiatingCall">
+            Incoming call...
+          </p>
+          <p class="text-gray-400 text-sm" *ngIf="!isCallActive && isInitiatingCall">
+            Calling...
           </p>
         </div>
       </div>
@@ -40,11 +43,11 @@
              class="w-full h-full object-cover bg-gray-900"
              autoplay 
              playsinline
-             [class.hidden]="remoteVideoOff">
+             [class.hidden]="remoteVideoOff || !isCallActive">
       </video>
       
       <!-- Remote Video Off Placeholder -->
-      <div *ngIf="remoteVideoOff" 
+      <div *ngIf="remoteVideoOff && isCallActive" 
            class="w-full h-full flex items-center justify-center bg-gray-800">
         <div class="text-center">
           <div class="w-20 h-20 bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -57,8 +60,8 @@
       </div>
     </div>
 
-    <!-- Local Video (Picture-in-Picture) -->
-    <div class="absolute top-4 right-4 w-32 h-24 md:w-48 md:h-36 rounded-lg overflow-hidden shadow-2xl border-2 border-white">
+    <!-- Local Video (Picture-in-Picture) - only show when call is active -->
+    <div *ngIf="isCallActive" class="absolute top-4 right-4 w-32 h-24 md:w-48 md:h-36 rounded-lg overflow-hidden shadow-2xl border-2 border-white">
       <video #localVideo 
              class="w-full h-full object-cover"
              autoplay 
@@ -67,38 +70,68 @@
       </video>
     </div>
 
-    <!-- Call Status Overlay -->
-    <div *ngIf="isRinging" 
-         class="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+    <!-- Caller Status Overlay (Calling state) -->
+    <div *ngIf="isInitiatingCall && !isCallActive" 
+         class="absolute inset-0 bg-black bg-opacity-70 flex items-center justify-center">
       <div class="text-center text-white">
-        <div class="w-24 h-24 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse">
-          <svg class="w-12 h-12" fill="currentColor" viewBox="0 0 20 20">
+        <div class="w-32 h-32 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-8 relative">
+          <!-- Animated rings for calling effect -->
+          <div class="absolute inset-0 rounded-full border-4 border-blue-400 animate-ping opacity-75"></div>
+          <div class="absolute inset-2 rounded-full border-4 border-blue-300 animate-ping opacity-50" style="animation-delay: 0.5s;"></div>
+          <svg class="w-16 h-16 relative z-10" fill="currentColor" viewBox="0 0 20 20">
             <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"/>
           </svg>
         </div>
-        <h3 class="text-2xl font-semibold mb-2">Incoming Call</h3>
-        <p class="text-gray-300 mb-6">Someone is calling you...</p>
-        <div class="flex justify-center space-x-4">
-          <button (click)="answerIncomingCall()" 
-                  class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-full font-semibold transition-colors">
-            <svg class="w-5 h-5 inline mr-2" fill="currentColor" viewBox="0 0 20 20">
+        <h3 class="text-3xl font-semibold mb-4">Calling...</h3>
+        <p class="text-gray-300 mb-8 text-lg">Connecting to the call</p>
+        <div class="flex justify-center">
+          <button (click)="hangUp()" 
+                  class="bg-red-600 hover:bg-red-700 text-white px-8 py-4 rounded-full font-semibold transition-colors flex items-center space-x-3">
+            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
               <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"/>
             </svg>
-            Answer
+            <span>Cancel</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Receiver Status Overlay (Incoming call) -->
+    <div *ngIf="isRinging && !isInitiatingCall && !isCallActive" 
+         class="absolute inset-0 bg-black bg-opacity-70 flex items-center justify-center">
+      <div class="text-center text-white">
+        <div class="w-32 h-32 bg-green-600 rounded-full flex items-center justify-center mx-auto mb-8 relative">
+          <!-- Animated rings for ringing effect -->
+          <div class="absolute inset-0 rounded-full border-4 border-green-400 animate-pulse"></div>
+          <div class="absolute inset-2 rounded-full border-4 border-green-300 animate-pulse" style="animation-delay: 0.3s;"></div>
+          <div class="absolute inset-4 rounded-full border-4 border-green-200 animate-pulse" style="animation-delay: 0.6s;"></div>
+          <svg class="w-16 h-16 relative z-10" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"/>
+          </svg>
+        </div>
+        <h3 class="text-3xl font-semibold mb-4">Incoming Call</h3>
+        <p class="text-gray-300 mb-8 text-lg">Someone is calling you</p>
+        <div class="flex justify-center space-x-6">
+          <button (click)="answerIncomingCall()" 
+                  class="bg-green-600 hover:bg-green-700 text-white px-8 py-4 rounded-full font-semibold transition-colors flex items-center space-x-3">
+            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"/>
+            </svg>
+            <span>Answer</span>
           </button>
           <button (click)="rejectIncomingCall()" 
-                  class="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-full font-semibold transition-colors">
-            <svg class="w-5 h-5 inline mr-2" fill="currentColor" viewBox="0 0 20 20">
+                  class="bg-red-600 hover:bg-red-700 text-white px-8 py-4 rounded-full font-semibold transition-colors flex items-center space-x-3">
+            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
               <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
             </svg>
-            Decline
+            <span>Decline</span>
           </button>
         </div>
       </div>
     </div>
 
     <!-- Connection Warning -->
-    <div *ngIf="showConnectionWarning" 
+    <div *ngIf="showConnectionWarning && isCallActive" 
          class="absolute top-4 left-4 bg-yellow-600 text-white px-4 py-2 rounded-lg shadow-lg">
       <div class="flex items-center space-x-2">
         <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
@@ -109,8 +142,8 @@
     </div>
   </div>
 
-  <!-- Control Bar -->
-  <div class="bg-black bg-opacity-90 backdrop-blur-sm border-t border-gray-800 p-4">
+  <!-- Control Bar (only show when call is active) -->
+  <div *ngIf="isCallActive" class="bg-black bg-opacity-90 backdrop-blur-sm border-t border-gray-800 p-4">
     <div class="flex items-center justify-center space-x-4 md:space-x-6">
       <!-- Mute Button -->
       <button (click)="toggleMute()" 
@@ -164,7 +197,7 @@
   </div>
 
   <!-- Settings Panel -->
-  <div *ngIf="showSettings" 
+  <div *ngIf="showSettings && isCallActive" 
        class="absolute inset-0 bg-black bg-opacity-75 flex items-center justify-center z-10">
     <div class="bg-gray-800 rounded-lg p-6 w-full max-w-md mx-4">
       <div class="flex items-center justify-between mb-4">

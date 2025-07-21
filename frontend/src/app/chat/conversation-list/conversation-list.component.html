@@ -1,99 +1,124 @@
-<!-- conversation-list.component.html -->
-<div class="h-full flex flex-col">
-  <!-- Header with search and create button -->
-  <div class="p-4 border-b border-gray-200 flex items-center justify-between">
-    <h2 class="text-xl font-semibold text-gray-800">Chats</h2>
+<div class="h-full flex flex-col bg-white">
+  <!-- Mobile Header with App Title, Notification Bell and Logout -->
+  <div class="bg-blue-600 text-white px-4 py-6 shadow-sm">
+    <div class="flex items-center justify-between mb-4">
+      <div class="flex items-center space-x-3">
+        <div class="bg-white bg-opacity-20 p-2 rounded-full">
+          <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M20 2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h4l4 4 4-4h4c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
+          </svg>
+        </div>
+        <h1 class="text-xl font-bold">B-Talk</h1>
+      </div>
+      <div class="flex items-center space-x-2">
+        <app-notification-bell></app-notification-bell>
+        <button (click)="logout()" class="p-2 bg-white bg-opacity-20 rounded-full hover:bg-opacity-30 transition-all">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Search box -->
+    <div class="relative">
+      <input type="text" 
+             placeholder="Search conversations..."
+             [(ngModel)]="searchTerm"
+             class="w-full pl-10 pr-4 py-3 rounded-xl border-0 bg-white bg-opacity-20 text-white placeholder-white placeholder-opacity-70 focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50 focus:bg-opacity-30 transition-all">
+      <svg class="absolute left-3 top-3.5 h-5 w-5 text-white text-opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+      </svg>
+    </div>
+  </div>
+
+  <!-- Conversations Header -->
+  <div class="px-4 py-4 border-b border-gray-100 flex items-center justify-between bg-white">
+    <h2 class="text-lg font-semibold text-gray-800">Recent Chats</h2>
     <button (click)="createModal.showModal = true"
-            class="p-2 rounded-full bg-blue-500 text-white hover:bg-blue-600 transition-colors">
+            class="p-2 rounded-full bg-blue-500 text-white hover:bg-blue-600 transition-colors shadow-sm">
       <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
       </svg>
     </button>
   </div>
 
-  <!-- Search box -->
-  <div class="p-4 border-b border-gray-200">
-    <div class="relative">
-      <input type="text" placeholder="Search conversations..."
-             [(ngModel)]="searchTerm"
-             class="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-      <svg class="absolute left-3 top-2.5 h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-      </svg>
-    </div>
-  </div>
-
-<!-- Conversation list -->
-<div class="flex-1 overflow-y-auto">
-  <!-- Loading state -->
-  <div *ngIf="isLoading" class="p-4 text-center text-gray-500">
-    <div class="animate-pulse flex space-x-4 items-center p-3">
-      <div class="rounded-full bg-gray-200 h-10 w-10"></div>
-      <div class="flex-1 space-y-2">
-        <div class="h-4 bg-gray-200 rounded w-3/4"></div>
-        <div class="h-3 bg-gray-200 rounded w-1/2"></div>
-      </div>
-    </div>
-    <div class="text-sm">Loading conversations...</div>
-  </div>
-
   <!-- Conversation list -->
-  <ng-container *ngIf="!(isLoading) && (filteredConversations$ | async) as conversations">
-    <!-- Empty state -->
-    <div *ngIf="conversations.length === 0" class="p-4 text-center text-gray-500">
-      <div class="mb-2">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-        </svg>
+  <div class="flex-1 overflow-y-auto bg-white">
+    <!-- Loading state -->
+    <div *ngIf="isLoading" class="p-4">
+      <div class="animate-pulse space-y-4">
+        <div *ngFor="let item of [1,2,3,4,5]" class="flex items-center space-x-4 p-3">
+          <div class="rounded-full bg-gray-200 h-12 w-12"></div>
+          <div class="flex-1 space-y-2">
+            <div class="h-4 bg-gray-200 rounded w-3/4"></div>
+            <div class="h-3 bg-gray-200 rounded w-1/2"></div>
+          </div>
+        </div>
       </div>
-      No conversations found
-      <div *ngIf="searchTerm.trim()" class="text-sm mt-1">Try a different search term</div>
     </div>
 
-    <!-- Conversation items -->
-    <div *ngFor="let conv of conversations"
-         class="p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer flex items-center"
-         [class.bg-blue-50]="chatService.activeConversation$ | async | isActiveConversation:conv"
-         (click)="selectConversation(conv)">
-
-      <!-- Avatar - handles group chats and 1:1 chats -->
-      <div class="relative mr-3">
-        <img [src]="getConversationAvatar(conv)"
-             class="h-10 w-10 rounded-full object-cover"
-             [alt]="getConversationName(conv)">
-        <span *ngIf="hasUnreadMessages(conv)"
-              class="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-blue-500 ring-2 ring-white"></span>
-      </div>
-
-      <div class="flex-1 min-w-0">
-        <div class="font-medium truncate">{{getConversationName(conv)}}</div>
-        <div class="text-sm text-gray-500 truncate" *ngIf="conv?.lastMessage">
-          <span *ngIf="conv.lastMessage?.senderId === getCurrentUserId()">You: </span>
-          {{(conv.lastMessage?.content || '') | truncate:30}}
-        </div>
-      </div>
-
-      <div class="flex flex-col items-end ml-2">
-        <div class="text-xs text-gray-400 whitespace-nowrap" *ngIf="conv?.lastMessage">
-          {{conv.lastMessage?.sentAt | date:'shortTime'}}
-        </div>
-        <span *ngIf="hasUnreadMessages(conv)" class="text-xs text-blue-500 mt-1">
-          {{getUnreadCount(conv)}}
-        </span>
-        <!-- Video call button -->
-        <button *ngIf="conv.type === 'PRIVATE'" 
-                (click)="startVideoCall(conv); $event.stopPropagation()"
-                class="mt-1 p-1 rounded-full bg-green-500 text-white hover:bg-green-600 transition-colors"
-                title="Start video call">
-          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                  d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+    <!-- Conversation list -->
+    <ng-container *ngIf="!(isLoading) && (filteredConversations$ | async) as conversations">
+      <!-- Empty state -->
+      <div *ngIf="conversations.length === 0" class="flex flex-col items-center justify-center p-8 text-center">
+        <div class="bg-gray-100 rounded-full p-6 mb-4">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
           </svg>
-        </button>
+        </div>
+        <h3 class="text-gray-600 font-medium mb-2">No conversations found</h3>
+        <p class="text-gray-400 text-sm" *ngIf="searchTerm.trim()">Try a different search term</p>
+        <p class="text-gray-400 text-sm" *ngIf="!searchTerm.trim()">Start a new conversation to get started</p>
       </div>
-    </div>
-  </ng-container>
-</div>
+
+      <!-- Conversation items -->
+      <div *ngFor="let conv of conversations"
+           class="px-4 py-4 border-b border-gray-50 hover:bg-blue-50 active:bg-blue-100 cursor-pointer flex items-center transition-colors"
+           [class.bg-blue-50]="chatService.activeConversation$ | async | isActiveConversation:conv"
+           [class.border-l-4]="chatService.activeConversation$ | async | isActiveConversation:conv"
+           [class.border-blue-500]="chatService.activeConversation$ | async | isActiveConversation:conv"
+           (click)="selectConversation(conv)">
+
+        <!-- Avatar with unread indicator -->
+        <div class="relative mr-4 flex-shrink-0">
+          <img [src]="getConversationAvatar(conv)"
+               class="h-12 w-12 rounded-full object-cover border-2 border-white shadow-sm"
+               [alt]="getConversationName(conv)">
+          <span *ngIf="hasUnreadMessages(conv)"
+                class="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-blue-500 ring-2 ring-white flex items-center justify-center">
+            <span class="text-xs text-white font-bold">{{getUnreadCount(conv)}}</span>
+          </span>
+        </div>
+
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center justify-between mb-1">
+            <h3 class="font-semibold text-gray-900 truncate">{{getConversationName(conv)}}</h3>
+            <div class="flex items-center space-x-2">
+              <span class="text-xs text-gray-400" *ngIf="conv?.lastMessage">
+                {{conv.lastMessage?.sentAt | date:'shortTime'}}
+              </span>
+              <!-- Video call button -->
+              <button *ngIf="conv.type === 'PRIVATE'" 
+                      (click)="startVideoCall(conv); $event.stopPropagation()"
+                      class="p-1.5 rounded-full bg-green-500 text-white hover:bg-green-600 transition-colors shadow-sm"
+                      title="Start video call">
+                <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                        d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <p class="text-sm text-gray-500 truncate" *ngIf="conv?.lastMessage">
+            <span *ngIf="conv.lastMessage?.senderId === getCurrentUserId()" class="font-medium">You: </span>
+            {{(conv.lastMessage?.content || '') | truncate:35}}
+          </p>
+          <p class="text-sm text-gray-400 italic" *ngIf="!conv?.lastMessage">No messages yet</p>
+        </div>
+      </div>
+    </ng-container>
+  </div>
 
   <!-- Conversation creation modal -->
   <app-conversation-create

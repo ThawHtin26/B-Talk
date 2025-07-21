@@ -1,24 +1,74 @@
-<div class="flex h-screen bg-gray-100">
-  <!-- Conversation list -->
-  <div class="w-1/4 border-r border-gray-200 bg-white">
+<div class="h-screen bg-white flex flex-col lg:flex-row overflow-hidden">
+  <!-- Desktop Sidebar - Conversation List (hidden on mobile) -->
+  <div class="hidden lg:flex lg:w-1/3 xl:w-1/4 bg-white border-r border-gray-200 flex-col">
     <app-conversation-list></app-conversation-list>
     <app-conversation-create></app-conversation-create>
   </div>
 
-  <!-- Main chat area -->
-  <div class="flex-1 flex flex-col">
-    <div class="flex-1 overflow-y-auto p-4">
-      <app-message-list *ngIf="!showVideoCall"></app-message-list>
-      <app-video-call 
-        *ngIf="showVideoCall" 
-        (endCall)="endVideoCall()"
-        [conversationId]="videoCallConversationId"
-        [recipientId]="videoCallRecipientId"
-        [isInitiatingCall]="isInitiatingVideoCall">
-      </app-video-call>
+  <!-- Mobile Header with Back Button (only shown in messages view on mobile) -->
+  <div *ngIf="currentView === 'messages'" class="lg:hidden bg-blue-600 text-white p-4 flex items-center shadow-sm">
+    <button (click)="showConversations()" class="mr-3 p-2 hover:bg-blue-700 rounded-full transition-colors">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+      </svg>
+    </button>
+    <h1 class="text-lg font-semibold">{{ getActiveConversationName() }}</h1>
+  </div>
+
+  <!-- Main Content Area -->
+  <div class="flex-1 flex overflow-hidden">
+    <!-- Mobile Conversation List View (only shown on mobile when currentView is 'conversations') -->
+    <div *ngIf="currentView === 'conversations'" class="lg:hidden w-full flex flex-col bg-white">
+      <app-conversation-list (conversationSelected)="showMessages()"></app-conversation-list>
+      <app-conversation-create></app-conversation-create>
     </div>
-    <div class="border-t border-gray-200 p-4 bg-white">
-      <app-message-input (videoCall)="startVideoCall()"></app-message-input>
+
+    <!-- Messages View (shown on mobile when currentView is 'messages', always shown on desktop) -->
+    <div *ngIf="currentView === 'messages' || isDesktopView()" class="w-full flex flex-col">
+      <!-- Desktop Header for Messages (only shown on desktop) -->
+      <div *ngIf="isDesktopView()" class="hidden lg:flex bg-white border-b border-gray-200 p-4 items-center shadow-sm">
+        <h1 class="text-xl font-semibold text-gray-800">{{ getActiveConversationName() }}</h1>
+        <div class="ml-auto flex items-center space-x-2">
+          <!-- Video call button for desktop -->
+          <button *ngIf="canStartVideoCall()" 
+                  (click)="startVideoCall()"
+                  class="p-2 bg-green-500 text-white rounded-full hover:bg-green-600 transition-colors"
+                  title="Start video call">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                    d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Message List -->
+      <div class="flex-1 overflow-y-auto bg-gray-50">
+        <!-- Show empty state when no conversation is selected on desktop -->
+        <div *ngIf="isDesktopView() && !hasActiveConversation()" class="flex items-center justify-center h-full text-gray-500">
+          <div class="text-center">
+            <svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            </svg>
+            <h3 class="text-lg font-medium mb-2">Select a conversation</h3>
+            <p class="text-sm">Choose a conversation from the sidebar to start messaging</p>
+          </div>
+        </div>
+
+        <app-message-list *ngIf="!showVideoCall && hasActiveConversation()"></app-message-list>
+        <app-video-call 
+          *ngIf="showVideoCall" 
+          (endCall)="endVideoCall()"
+          [conversationId]="videoCallConversationId"
+          [recipientId]="videoCallRecipientId"
+          [isInitiatingCall]="isInitiatingVideoCall">
+        </app-video-call>
+      </div>
+
+      <!-- Message Input (only shown when there's an active conversation and no video call) -->
+      <div *ngIf="!showVideoCall && hasActiveConversation()" class="border-t border-gray-200 bg-white">
+        <app-message-input (videoCall)="startVideoCall()"></app-message-input>
+      </div>
     </div>
   </div>
 </div>

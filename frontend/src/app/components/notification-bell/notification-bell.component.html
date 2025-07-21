@@ -1,83 +1,117 @@
-<div class="notification-bell">
+<div class="relative inline-block">
   <!-- Notification permission request -->
-  <div *ngIf="!isSupported || isPermissionDenied" class="notification-warning">
-    <i class="fas fa-exclamation-triangle"></i>
-    <span>Enable notifications for better experience</span>
-    <button (click)="requestNotificationPermission()" class="permission-btn">
-      Enable Notifications
+  <div *ngIf="!isSupported || isPermissionDenied" class="flex items-center gap-2 px-3 py-2 bg-yellow-50 border border-yellow-200 rounded-lg text-xs text-yellow-800 mb-2">
+    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+      <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+    </svg>
+    <span class="flex-1">Enable notifications for better experience</span>
+    <button (click)="requestNotificationPermission()" class="px-2 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600 transition-colors">
+      Enable
     </button>
   </div>
 
   <!-- Notification bell -->
-  <div *ngIf="isSupported && isPermissionGranted" class="bell-container">
-    <div class="bell-wrapper" (click)="toggleDropdown()">
-      <i class="fas fa-bell"></i>
-      <span *ngIf="unreadCount > 0" class="badge">{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
-    </div>
-    
+  <div *ngIf="isSupported && isPermissionGranted" class="relative">
+    <button (click)="toggleDropdown()" class="relative p-2 hover:bg-white hover:bg-opacity-30 rounded-full transition-all duration-200">
+      <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
+      </svg>
+      <span *ngIf="unreadCount > 0" class="absolute -top-1 -right-1 h-5 w-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center ring-2 ring-white">
+        {{ unreadCount > 99 ? '99+' : unreadCount }}
+      </span>
+    </button>
 
     <!-- Latest notification toast -->
-    <div *ngIf="latestNotification" class="latest-notification">
-      <div class="notification-content">
-        <i [class]="getNotificationIcon(latestNotification.type)" 
-           [class]="getNotificationClass(latestNotification.type)"></i>
-        <div class="notification-text">
-          <div class="notification-title">{{ latestNotification.title }}</div>
-          <div class="notification-message">{{ latestNotification.message }}</div>
+    <div *ngIf="latestNotification" class="absolute top-full right-0 mt-2 w-80 bg-white rounded-xl shadow-lg border border-gray-200 p-4 z-50 animate-pulse">
+      <div class="flex items-start space-x-3">
+        <div class="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+          <svg [class]="getNotificationIcon(latestNotification.type)" class="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+          </svg>
+        </div>
+        <div class="flex-1">
+          <div class="font-semibold text-gray-900 text-sm">{{ latestNotification.title }}</div>
+          <div class="text-gray-600 text-xs mt-1">{{ latestNotification.message }}</div>
         </div>
       </div>
     </div>
 
     <!-- Dropdown -->
-    <div *ngIf="showDropdown" class="dropdown">
-      <div class="dropdown-header">
-        <h3>Notifications</h3>
-        <div class="dropdown-actions">
-          <button (click)="markAllAsRead()" class="action-btn">
-            <i class="fas fa-check-double"></i>
+    <div *ngIf="showDropdown" class="absolute top-full right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-gray-200 z-50 max-h-96 overflow-hidden">
+      <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50 rounded-t-xl">
+        <h3 class="font-semibold text-gray-900">Notifications</h3>
+        <div class="flex space-x-2">
+          <button (click)="markAllAsRead()" class="p-1.5 hover:bg-gray-200 rounded-full transition-colors" title="Mark all as read">
+            <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+            </svg>
           </button>
-          <button (click)="clearAllNotifications()" class="action-btn">
-            <i class="fas fa-trash"></i>
+          <button (click)="clearAllNotifications()" class="p-1.5 hover:bg-gray-200 rounded-full transition-colors" title="Clear all">
+            <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+            </svg>
           </button>
         </div>
       </div>
 
-      <div class="notifications-list">
-        <div *ngIf="notifications.length === 0" class="empty-state">
-          <i class="fas fa-bell-slash"></i>
-          <p>No notifications</p>
+      <div class="max-h-80 overflow-y-auto">
+        <div *ngIf="notifications.length === 0" class="flex flex-col items-center justify-center py-8 text-center">
+          <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-3">
+            <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M15 17h5l-5 5v-5z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 6H4a2 2 0 00-2 2v8a2 2 0 002 2h5m6 0a2 2 0 002-2V8a2 2 0 00-2-2H9z"/>
+            </svg>
+          </div>
+          <p class="text-gray-500 text-sm">No notifications</p>
         </div>
 
         <div *ngFor="let notification of notifications" 
-             class="notification-item"
-             [class.unread]="!notification.isRead"
+             class="flex items-start space-x-3 px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors border-b border-gray-50 last:border-b-0"
+             [class.bg-blue-50]="!notification.isRead"
+             [class.border-l-4]="!notification.isRead"
+             [class.border-blue-500]="!notification.isRead"
              (click)="onNotificationClick(notification)">
           
-          <div class="notification-icon">
-            <i [class]="getNotificationIcon(notification.type)" 
-               [class]="getNotificationClass(notification.type)"></i>
+          <div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center"
+               [class.bg-blue-100]="notification.type === 'NEW_MESSAGE' || notification.type === 'NEW_CONVERSATION'"
+               [class.bg-green-100]="notification.type === 'CALL_INCOMING' || notification.type === 'CALL_MISSED' || notification.type === 'CALL_ENDED'"
+               [class.bg-purple-100]="notification.type === 'SYSTEM_ANNOUNCEMENT'">
+            <svg [class]="getNotificationIcon(notification.type)" 
+                 class="w-4 h-4"
+                 [class.text-blue-600]="notification.type === 'NEW_MESSAGE' || notification.type === 'NEW_CONVERSATION'"
+                 [class.text-green-600]="notification.type === 'CALL_INCOMING' || notification.type === 'CALL_MISSED' || notification.type === 'CALL_ENDED'"
+                 [class.text-purple-600]="notification.type === 'SYSTEM_ANNOUNCEMENT'"
+                 fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+            </svg>
           </div>
 
-          <div class="notification-content">
-            <div class="notification-header">
-              <div class="notification-title">{{ notification.title }}</div>
-              <div class="notification-time">{{ formatTimestamp(notification.createdAt) }}</div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-start justify-between mb-1">
+              <div class="font-medium text-gray-900 text-sm truncate">{{ notification.title }}</div>
+              <div class="text-xs text-gray-400 ml-2 flex-shrink-0">{{ formatTimestamp(notification.createdAt) }}</div>
             </div>
-            <div class="notification-message">{{ notification.message }}</div>
-            <div *ngIf="notification.senderName" class="notification-sender">
+            <div class="text-gray-600 text-xs mb-1 line-clamp-2">{{ notification.message }}</div>
+            <div *ngIf="notification.senderName" class="text-gray-400 text-xs italic">
               From: {{ notification.senderName }}
             </div>
           </div>
 
-          <div class="notification-actions">
+          <div class="flex flex-col space-y-1 opacity-0 group-hover:opacity-100 transition-opacity">
             <button *ngIf="!notification.isRead" 
                     (click)="markAsRead(notification); $event.stopPropagation()"
-                    class="action-btn">
-              <i class="fas fa-check"></i>
+                    class="p-1 hover:bg-gray-200 rounded transition-colors"
+                    title="Mark as read">
+              <svg class="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+              </svg>
             </button>
             <button (click)="deleteNotification(notification); $event.stopPropagation()"
-                    class="action-btn delete">
-              <i class="fas fa-times"></i>
+                    class="p-1 hover:bg-red-100 hover:text-red-600 rounded transition-colors"
+                    title="Delete">
+              <svg class="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
             </button>
           </div>
         </div>
